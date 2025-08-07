@@ -1,0 +1,31 @@
+{
+    "folders": [
+        {
+            "name": "RAG Chatbot",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+        "python.terminal.activateEnvironment": true,
+        "terminal.integrated.cwd": "${workspaceFolder}",
+        "files.associations": {
+            "*.txt": "plaintext"
+        },
+        "search.exclude": {
+            "**/chroma_db/**": true,
+            "**/.uv/**": true,
+            "**/uv.lock": true
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-python.python",
+            "ms-python.flake8",
+            "ms-python.black-formatter",
+            "ms-python.isort",
+            "ms-toolsai.jupyter",
+            "humao.rest-client"
+        ]
+    }
+}
