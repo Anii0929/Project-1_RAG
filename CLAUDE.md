@@ -83,3 +83,11 @@ Key settings in [backend/config.py](backend/config.py):
 - Duplicate courses are automatically skipped during loading
 - Frontend uses vanilla JavaScript (no framework)
 - No formal testing framework - this is a learning/demo project
+
+## Package Management Guidelines
+
+- Always use `uv`, never `pip`
+- Use `uv` for:
+  - Package management
+  - Python versions handling
+  - Module executions
