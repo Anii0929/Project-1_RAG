@@ -79,3 +79,5 @@ The project uses **uv** as the package manager with core dependencies:
 - `backend/chroma_db/`: Persisted vector database
 - `frontend/`: Static web interface files
 - `main.py`: Entry point (unused in favor of FastAPI app)
+- Always use uv to run the server and do not run pip directly
+- Always use uv to manage all dependencies
