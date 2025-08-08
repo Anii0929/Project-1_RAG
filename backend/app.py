@@ -1,16 +1,19 @@
-import warnings
-warnings.filterwarnings("ignore", message="resource_tracker: There appear to be.*")
-
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-import os
-
-from config import config
+from pathlib import Path
+from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 from rag_system import RAGSystem
+from config import config
+import os
+from typing import List, Optional
+from pydantic import BaseModel
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException
+import warnings
+warnings.filterwarnings(
+    "ignore", message="resource_tracker: There appear to be.*")
+
 
 # Initialize FastAPI app
 app = FastAPI(title="Course Materials RAG System", root_path="")
@@ -35,16 +38,20 @@ app.add_middleware(
 rag_system = RAGSystem(config)
 
 # Pydantic models for request/response
+
+
 class QueryRequest(BaseModel):
     """Request model for course queries"""
     query: str
     session_id: Optional[str] = None
+
 
 class QueryResponse(BaseModel):
     """Response model for course queries"""
     answer: str
     sources: List[str]
     session_id: str
+
 
 class CourseStats(BaseModel):
     """Response model for course statistics"""
@@ -55,7 +62,7 @@ class CourseStats(BaseModel):
 
 
 # New endpoint to create a new chat session
-from fastapi.responses import JSONResponse
+
 
 @app.post("/api/session/new")
 async def create_new_session(prev_session_id: Optional[str] = None):
@@ -77,10 +84,10 @@ async def query_documents(request: QueryRequest):
         session_id = request.session_id
         if not session_id:
             session_id = rag_system.session_manager.create_session()
-        
+
         # Process query using RAG system
         answer, sources = rag_system.query(request.query, session_id)
-        
+
         return QueryResponse(
             answer=answer,
             sources=sources,
@@ -88,6 +95,7 @@ async def query_documents(request: QueryRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/courses", response_model=CourseStats)
 async def get_course_stats():
@@ -101,6 +109,7 @@ async def get_course_stats():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.on_event("startup")
 async def startup_event():
     """Load initial documents on startup"""
@@ -108,16 +117,13 @@ async def startup_event():
     if os.path.exists(docs_path):
         print("Loading initial documents...")
         try:
-            courses, chunks = rag_system.add_course_folder(docs_path, clear_existing=False)
+            courses, chunks = rag_system.add_course_folder(
+                docs_path, clear_existing=False)
             print(f"Loaded {courses} courses with {chunks} chunks")
         except Exception as e:
             print(f"Error loading documents: {e}")
 
 # Custom static file handler with no-cache headers for development
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
-from pathlib import Path
 
 
 class DevStaticFiles(StaticFiles):
@@ -129,7 +135,7 @@ class DevStaticFiles(StaticFiles):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
         return response
-    
-    
+
+
 # Serve static files for the frontend
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
