@@ -53,6 +53,22 @@ class CourseStats(BaseModel):
 
 # API Endpoints
 
+
+# New endpoint to create a new chat session
+from fastapi.responses import JSONResponse
+
+@app.post("/api/session/new")
+async def create_new_session(prev_session_id: Optional[str] = None):
+    """Create a new session and clear previous session if provided"""
+    try:
+        if prev_session_id:
+            rag_system.session_manager.clear_session(prev_session_id)
+        session_id = rag_system.session_manager.create_session()
+        return JSONResponse(content={"session_id": session_id})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/query", response_model=QueryResponse)
 async def query_documents(request: QueryRequest):
     """Process a query and return response with sources"""

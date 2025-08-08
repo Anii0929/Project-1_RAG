@@ -1,3 +1,24 @@
+/* New Chat Button - Sidebar Header Style */
+.sidebar-header-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+    transition: color 0.2s ease;
+    border-radius: 6px;
+}
+.sidebar-header-btn:hover, .sidebar-header-btn:focus {
+    color: var(--primary-color);
+    background: var(--surface-hover);
+    outline: none;
+}
 /* Modern CSS Reset */
 *, *::before, *::after {
     box-sizing: border-box;

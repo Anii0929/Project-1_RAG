@@ -15,10 +15,37 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
-    
+
     setupEventListeners();
     createNewSession();
     loadCourseStats();
+
+    // New Chat button logic
+    const newChatButton = document.getElementById('newChatButton');
+    if (newChatButton) {
+        newChatButton.addEventListener('click', async () => {
+            try {
+                // Call backend to create new session and clear previous one
+                const response = await fetch(`${API_URL}/session/new`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prev_session_id: currentSessionId })
+                });
+                if (!response.ok) throw new Error('Failed to start new chat');
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                chatMessages.innerHTML = '';
+                addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+                chatInput.value = '';
+                chatInput.disabled = false;
+                sendButton.disabled = false;
+                chatInput.focus();
+            } catch (error) {
+                chatMessages.innerHTML = '';
+                addMessage('Error: Could not start a new chat session.', 'assistant');
+            }
+        });
+    }
 });
 
 // Event Listeners
