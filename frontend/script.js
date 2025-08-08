@@ -122,32 +122,10 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
-        console.log('Sources received:', sources); // Debug log
-        const sourceElements = sources.map(source => {
-            console.log('Processing source:', source, 'Type:', typeof source); // Debug log
-            
-            // Handle both string and object sources
-            if (typeof source === 'string') {
-                return escapeHtml(source);
-            } else if (source && typeof source === 'object') {
-                // Object source with potential lesson link
-                if (source.lesson_link && source.display_text) {
-                    return `<a href="${escapeHtml(source.lesson_link)}" target="_blank" rel="noopener noreferrer" class="source-link">${escapeHtml(source.display_text)}</a>`;
-                } else if (source.display_text) {
-                    return escapeHtml(source.display_text);
-                } else {
-                    // Fallback for objects without display_text
-                    return escapeHtml(JSON.stringify(source));
-                }
-            }
-            // Fallback for any other type
-            return escapeHtml(String(source));
-        }).filter(el => el);
-        
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sourceElements.join(', ')}</div>
+                <div class="sources-content">${sources.join(', ')}</div>
             </details>
         `;
     }

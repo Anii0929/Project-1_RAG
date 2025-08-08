@@ -93,7 +93,6 @@ class CourseSearchTool(Tool):
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
-            lesson_link = meta.get('lesson_link')
             
             # Build context header
             header = f"[{course_title}"
@@ -101,13 +100,10 @@ class CourseSearchTool(Tool):
                 header += f" - Lesson {lesson_num}"
             header += "]"
             
-            # Track source for the UI with lesson link if available
-            source = {
-                "display_text": course_title,
-                "lesson_link": lesson_link
-            }
+            # Track source for the UI
+            source = course_title
             if lesson_num is not None:
-                source["display_text"] += f" - Lesson {lesson_num}"
+                source += f" - Lesson {lesson_num}"
             sources.append(source)
             
             formatted.append(f"{header}\n{doc}")
