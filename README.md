@@ -63,3 +63,5 @@ Commands
 ```sh
 claude mcp add playwright npx @playwright/mcp@latest
 ```
+
+[Reading Notes including Prompts](https://github.com/https-deeplearning-ai/sc-claude-code-files/tree/main/reading_notes)
