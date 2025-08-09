@@ -2,10 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Environment
+- **Platform**: Windows
+- **Shell**: PowerShell
+- **Package Manager**: uv
+
 ## Development Commands
 
 ### Installation & Setup
-```bash
+```powershell
 # Install dependencies using uv package manager
 uv sync
 
@@ -14,19 +19,19 @@ echo "ANTHROPIC_API_KEY=your_key_here" > .env
 ```
 
 ### Running the Application
-```bash
-# Quick start with provided script
-chmod +x run.sh
-./run.sh
-
+```powershell
 # Manual start (preferred for development)
-cd backend && uv run uvicorn app:app --reload --port 8000
+cd backend; uv run uvicorn app:app --reload --port 8000
+
+# Alternative: Use run script if available
+./run.sh
 ```
 
 ### Development Workflow
 - **Frontend**: Static files served from `frontend/` directory (HTML/CSS/JS)
 - **Backend**: FastAPI server with auto-reload during development
 - **Database**: ChromaDB persisted locally in `backend/chroma_db/`
+- **Logging**: Full logging implementation with appropriate DEBUG and INFO levels throughout the codebase
 
 ## Architecture Overview
 
@@ -81,3 +86,10 @@ The project uses **uv** as the package manager with core dependencies:
 - `main.py`: Entry point (unused in favor of FastAPI app)
 - Always use uv to run the server and do not run pip directly
 - Always use uv to manage all dependencies
+
+## Code Generation Guidelines
+- **Logging**: All generated code must include appropriate logging statements
+  - Use `logger.debug()` for detailed debugging information
+  - Use `logger.info()` for important operational events
+  - Follow existing logging patterns in the codebase
+  - Import logger: `import logging; logger = logging.getLogger(__name__)`
