@@ -52,10 +52,15 @@ class QueryRequest(BaseModel):
     session_id: Optional[str] = None
 
 
+class Source(BaseModel):
+    """Source information with optional link"""
+    text: str
+    link: Optional[str] = None
+
 class QueryResponse(BaseModel):
     """Response model for course queries"""
     answer: str
-    sources: List[str]
+    sources: List[Source]
     session_id: str
 
 
@@ -94,9 +99,19 @@ async def query_documents(request: QueryRequest):
         # Process query using RAG system
         answer, sources = rag_system.query(request.query, session_id)
 
+        # Convert sources to Source objects
+        source_objects = []
+        for source in sources:
+            if isinstance(source, dict) and "text" in source:
+                # New format with embedded links
+                source_objects.append(Source(text=source["text"], link=source.get("link")))
+            else:
+                # Legacy string format
+                source_objects.append(Source(text=str(source), link=None))
+
         return QueryResponse(
             answer=answer,
-            sources=sources,
+            sources=source_objects,
             session_id=session_id
         )
     except Exception as e:

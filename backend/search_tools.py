@@ -1,6 +1,9 @@
 from typing import Dict, Any, Optional, Protocol
 from abc import ABC, abstractmethod
 from vector_store import VectorStore, SearchResults
+from logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class Tool(ABC):
@@ -88,7 +91,7 @@ class CourseSearchTool(Tool):
     def _format_results(self, results: SearchResults) -> str:
         """Format search results with course and lesson context"""
         formatted = []
-        sources = []  # Track sources for the UI
+        sources = []  # Track sources for the UI with embedded links
         
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
@@ -100,16 +103,29 @@ class CourseSearchTool(Tool):
                 header += f" - Lesson {lesson_num}"
             header += "]"
             
-            # Track source for the UI
-            source = course_title
+            # Get lesson link if available
+            lesson_link = None
             if lesson_num is not None:
-                source += f" - Lesson {lesson_num}"
-            sources.append(source)
+                lesson_link = self.store.get_lesson_link(course_title, lesson_num)
+                logger.debug(f"Retrieved lesson link for '{course_title}' Lesson {lesson_num}: {lesson_link}")
+            
+            # Create source entry with embedded link information
+            source_text = course_title
+            if lesson_num is not None:
+                source_text += f" - Lesson {lesson_num}"
+            
+            # Create source object with both display text and link
+            source_entry = {
+                "text": source_text,
+                "link": lesson_link
+            }
+            sources.append(source_entry)
             
             formatted.append(f"{header}\n{doc}")
         
         # Store sources for retrieval
         self.last_sources = sources
+        logger.info(f"Formatted {len(sources)} search results with embedded lesson links")
         
         return "\n\n".join(formatted)
 

@@ -152,10 +152,22 @@ function addMessage(content, type, sources = null, isWelcome = false) {
   let html = `<div class="message-content">${displayContent}</div>`
 
   if (sources && sources.length > 0) {
+    // Process sources to handle both string and object formats
+    const processedSources = sources.map(source => {
+      if (typeof source === 'object' && source.text && source.link) {
+        // Source with embedded link
+        return `<a href="${source.link}" target="_blank" rel="noopener noreferrer">${source.text}</a>`
+      } else if (typeof source === 'string') {
+        // Legacy string-only source
+        return source
+      }
+      return source
+    })
+
     html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <div class="sources-content">${processedSources.join(', ')}</div>
             </details>
         `
   }
