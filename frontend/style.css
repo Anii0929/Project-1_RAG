@@ -281,17 +281,24 @@ header h1 {
 .sources-content a {
   color: var(--primary-color);
   text-decoration: none;
-  border-bottom: 1px dotted var(--primary-color);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
   transition: all 0.2s ease;
+  display: inline-block;
+  margin: 2px;
+  font-weight: 500;
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .sources-content a:hover {
-  color: var(--primary-hover);
-  border-bottom-style: solid;
-  background-color: rgba(37, 99, 235, 0.05);
-  padding: 2px 4px;
-  border-radius: 4px;
-  margin: -2px -4px;
+  color: white;
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 /* Markdown formatting styles */
