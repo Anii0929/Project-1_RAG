@@ -4,6 +4,9 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from models import Course, CourseChunk
 from sentence_transformers import SentenceTransformer
+from logging_config import get_logger
+
+logger = get_logger(__name__)
 
 @dataclass
 class SearchResults:
@@ -35,21 +38,27 @@ class VectorStore:
     """Vector storage using ChromaDB for course content and metadata"""
     
     def __init__(self, chroma_path: str, embedding_model: str, max_results: int = 5):
+        logger.info(f"Initializing VectorStore - path: {chroma_path}, model: {embedding_model}, max_results: {max_results}")
         self.max_results = max_results
+        
         # Initialize ChromaDB client
+        logger.debug("Setting up ChromaDB client")
         self.client = chromadb.PersistentClient(
             path=chroma_path,
             settings=Settings(anonymized_telemetry=False)
         )
         
         # Set up sentence transformer embedding function
+        logger.debug(f"Loading embedding model: {embedding_model}")
         self.embedding_function = chromadb.utils.embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name=embedding_model
         )
         
         # Create collections for different types of data
+        logger.debug("Creating/accessing ChromaDB collections")
         self.course_catalog = self._create_collection("course_catalog")  # Course titles/instructors
         self.course_content = self._create_collection("course_content")  # Actual course material
+        logger.info("VectorStore initialization complete")
     
     def _create_collection(self, name: str):
         """Create or get a ChromaDB collection"""
@@ -135,7 +144,8 @@ class VectorStore:
     def add_course_metadata(self, course: Course):
         """Add course information to the catalog for semantic search"""
         import json
-
+        
+        logger.info(f"Adding course metadata to catalog: '{course.title}'")
         course_text = course.title
         
         # Build lessons metadata and serialize as JSON string
@@ -147,22 +157,34 @@ class VectorStore:
                 "lesson_link": lesson.lesson_link
             })
         
+        lessons_with_links = sum(1 for lesson in course.lessons if lesson.lesson_link)
+        logger.debug(f"Course '{course.title}': {len(course.lessons)} lessons, {lessons_with_links} with links")
+        
+        metadata = {
+            "title": course.title,
+            "instructor": course.instructor,
+            "course_link": course.course_link,
+            "lessons_json": json.dumps(lessons_metadata),  # Serialize as JSON string
+            "lesson_count": len(course.lessons)
+        }
+        
+        logger.debug(f"Adding to course_catalog collection: id='{course.title}'")
         self.course_catalog.add(
             documents=[course_text],
-            metadatas=[{
-                "title": course.title,
-                "instructor": course.instructor,
-                "course_link": course.course_link,
-                "lessons_json": json.dumps(lessons_metadata),  # Serialize as JSON string
-                "lesson_count": len(course.lessons)
-            }],
+            metadatas=[metadata],
             ids=[course.title]
         )
+        logger.info(f"Successfully added course metadata for: '{course.title}'")
     
     def add_course_content(self, chunks: List[CourseChunk]):
         """Add course content chunks to the vector store"""
         if not chunks:
+            logger.debug("No chunks to add to course content")
             return
+        
+        logger.info(f"Adding {len(chunks)} content chunks to vector store")
+        course_title = chunks[0].course_title if chunks else "Unknown"
+        logger.debug(f"Course: '{course_title}' - Processing {len(chunks)} chunks")
         
         documents = [chunk.content for chunk in chunks]
         metadatas = [{
@@ -173,22 +195,30 @@ class VectorStore:
         # Use title with chunk index for unique IDs
         ids = [f"{chunk.course_title.replace(' ', '_')}_{chunk.chunk_index}" for chunk in chunks]
         
+        logger.debug(f"Adding chunks to course_content collection with IDs: {ids[0]}...{ids[-1]}")
         self.course_content.add(
             documents=documents,
             metadatas=metadatas,
             ids=ids
         )
+        logger.info(f"Successfully added {len(chunks)} chunks for course: '{course_title}'")
     
     def clear_all_data(self):
         """Clear all data from both collections"""
+        logger.warning("Clearing all data from vector store collections")
         try:
+            logger.debug("Deleting course_catalog collection")
             self.client.delete_collection("course_catalog")
+            logger.debug("Deleting course_content collection")
             self.client.delete_collection("course_content")
             # Recreate collections
+            logger.debug("Recreating collections")
             self.course_catalog = self._create_collection("course_catalog")
             self.course_content = self._create_collection("course_content")
+            logger.info("Successfully cleared and recreated all collections")
         except Exception as e:
-            print(f"Error clearing data: {e}")
+            logger.error(f"Error clearing data: {e}")
+            raise
     
     def get_existing_course_titles(self) -> List[str]:
         """Get all existing course titles from the vector store"""

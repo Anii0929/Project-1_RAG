@@ -14,6 +14,11 @@ import warnings
 warnings.filterwarnings(
     "ignore", message="resource_tracker: There appear to be.*")
 
+# Initialize logging
+from logging_config import setup_logging, get_logger
+setup_logging(log_level="INFO", log_file="logs/rag_system.log")
+logger = get_logger(__name__)
+
 
 # Initialize FastAPI app
 app = FastAPI(title="Course Materials RAG System", root_path="")
@@ -35,6 +40,7 @@ app.add_middleware(
 )
 
 # Initialize RAG system
+logger.info("Starting Course Materials RAG System")
 rag_system = RAGSystem(config)
 
 # Pydantic models for request/response
@@ -115,13 +121,15 @@ async def startup_event():
     """Load initial documents on startup"""
     docs_path = "../docs"
     if os.path.exists(docs_path):
-        print("Loading initial documents...")
+        logger.info("Loading initial documents...")
         try:
             courses, chunks = rag_system.add_course_folder(
                 docs_path, clear_existing=False)
-            print(f"Loaded {courses} courses with {chunks} chunks")
+            logger.info(f"Loaded {courses} courses with {chunks} chunks")
         except Exception as e:
-            print(f"Error loading documents: {e}")
+            logger.error(f"Error loading documents: {e}")
+    else:
+        logger.warning(f"Documents directory does not exist: {docs_path}")
 
 # Custom static file handler with no-cache headers for development
 
