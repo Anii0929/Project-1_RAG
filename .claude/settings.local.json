@@ -4,7 +4,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "mcp__playwright__browser_navigate",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_wait_for"
     ],
     "deny": []
   }

@@ -16,7 +16,7 @@ warnings.filterwarnings(
 
 # Initialize logging
 from logging_config import setup_logging, get_logger
-setup_logging(log_level="INFO", log_file="logs/rag_system.log")
+setup_logging(log_level="DEBUG", log_file="logs/rag_system.log")
 logger = get_logger(__name__)
 
 
