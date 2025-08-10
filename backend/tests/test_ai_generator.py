@@ -194,6 +194,140 @@ class TestAIGenerator:
         assert "tool_choice" in params
         assert params["tool_choice"]["type"] == "auto"
         
+    def test_sequential_tool_calling_two_rounds(self, ai_generator_with_mock, tool_manager):
+        """Test sequential tool calling across two rounds"""
+        # Mock tool blocks for round 1
+        mock_tool_block1 = Mock()
+        mock_tool_block1.type = "tool_use"
+        mock_tool_block1.name = "get_course_outline"
+        mock_tool_block1.id = "tool_1"
+        mock_tool_block1.input = {"course_name": "MCP Basics"}
+        
+        # Mock tool blocks for round 2
+        mock_tool_block2 = Mock()
+        mock_tool_block2.type = "tool_use"
+        mock_tool_block2.name = "search_course_content"
+        mock_tool_block2.id = "tool_2"
+        mock_tool_block2.input = {"query": "lesson 4 topic"}
+        
+        # Round 1 response with tool use
+        round1_response = Mock()
+        round1_response.content = [mock_tool_block1]
+        round1_response.stop_reason = "tool_use"
+        
+        # Round 2 response with tool use
+        round2_response = Mock()
+        round2_response.content = [mock_tool_block2]
+        round2_response.stop_reason = "tool_use"
+        
+        # Final response without tool use
+        final_response = Mock()
+        final_response.content = [Mock(text="Found courses discussing the same topic as lesson 4")]
+        
+        ai_generator_with_mock.client.messages.create.side_effect = [
+            round1_response, round2_response, final_response
+        ]
+        
+        tools = tool_manager.get_tool_definitions()
+        result = ai_generator_with_mock.generate_response(
+            "Find courses discussing the same topic as lesson 4 of MCP Basics",
+            tools=tools,
+            tool_manager=tool_manager
+        )
+        
+        assert result == "Found courses discussing the same topic as lesson 4"
+        # Should be called 3 times: round 1, round 2, final response
+        assert ai_generator_with_mock.client.messages.create.call_count == 3
+        
+    def test_sequential_tool_calling_early_termination(self, ai_generator_with_mock, tool_manager):
+        """Test that conversation stops early when Claude doesn't use tools"""
+        # Round 1 response without tool use
+        round1_response = Mock()
+        round1_response.content = [Mock(text="This is a general knowledge question")]
+        round1_response.stop_reason = "end_turn"
+        
+        ai_generator_with_mock.client.messages.create.return_value = round1_response
+        
+        tools = tool_manager.get_tool_definitions()
+        result = ai_generator_with_mock.generate_response(
+            "What is artificial intelligence?",
+            tools=tools,
+            tool_manager=tool_manager
+        )
+        
+        assert result == "This is a general knowledge question"
+        # Should only be called once
+        assert ai_generator_with_mock.client.messages.create.call_count == 1
+        
+    def test_sequential_tool_calling_max_rounds(self, ai_generator_with_mock, tool_manager):
+        """Test that conversation stops after max rounds (2)"""
+        # Mock tool block
+        mock_tool_block = Mock()
+        mock_tool_block.type = "tool_use"
+        mock_tool_block.name = "search_course_content"
+        mock_tool_block.id = "tool_123"
+        mock_tool_block.input = {"query": "testing"}
+        
+        # Both round 1 and round 2 responses use tools
+        tool_response = Mock()
+        tool_response.content = [mock_tool_block]
+        tool_response.stop_reason = "tool_use"
+        
+        # Final response after max rounds
+        final_response = Mock()
+        final_response.content = [Mock(text="Final response after 2 tool rounds")]
+        
+        ai_generator_with_mock.client.messages.create.side_effect = [
+            tool_response, tool_response, final_response
+        ]
+        
+        tools = tool_manager.get_tool_definitions()
+        result = ai_generator_with_mock.generate_response(
+            "Complex query requiring multiple tools",
+            tools=tools,
+            tool_manager=tool_manager
+        )
+        
+        assert result == "Final response after 2 tool rounds"
+        # Should be called 3 times: 2 tool rounds + 1 final
+        assert ai_generator_with_mock.client.messages.create.call_count == 3
+        
+    def test_sequential_tool_calling_with_tool_error(self, ai_generator_with_mock, tool_manager):
+        """Test graceful handling of tool errors in sequential calling"""
+        # Mock tool block
+        mock_tool_block = Mock()
+        mock_tool_block.type = "tool_use"
+        mock_tool_block.name = "search_course_content"
+        mock_tool_block.id = "tool_123"
+        mock_tool_block.input = {"query": "testing"}
+        
+        # Round 1 with tool use
+        round1_response = Mock()
+        round1_response.content = [mock_tool_block]
+        round1_response.stop_reason = "tool_use"
+        
+        # Final response
+        final_response = Mock()
+        final_response.content = [Mock(text="Response despite tool error")]
+        
+        # Mock tool manager to raise exception
+        tool_manager.execute_tool.side_effect = Exception("Tool execution failed")
+        
+        ai_generator_with_mock.client.messages.create.side_effect = [
+            round1_response, final_response
+        ]
+        
+        tools = tool_manager.get_tool_definitions()
+        result = ai_generator_with_mock.generate_response(
+            "Query with failing tools",
+            tools=tools,
+            tool_manager=tool_manager
+        )
+        
+        assert result == "Response despite tool error"
+        # Should continue despite tool error
+        assert ai_generator_with_mock.client.messages.create.call_count == 2
+
     def test_error_handling_in_tool_execution(self, ai_generator_with_mock):
         """Test error handling during tool execution"""
         # Create mock tool manager that raises exception
