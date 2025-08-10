@@ -5,7 +5,7 @@ const API_URL = '/api'
 let currentSessionId = null
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, themeToggle
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,8 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
   sendButton = document.getElementById('sendButton')
   totalCourses = document.getElementById('totalCourses')
   courseTitles = document.getElementById('courseTitles')
+  themeToggle = document.getElementById('themeToggle')
 
   setupEventListeners()
+  initializeTheme()
   createNewSession()
   loadCourseStats()
 
@@ -60,6 +62,18 @@ function setupEventListeners() {
   chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage()
   })
+
+  // Theme toggle functionality
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme)
+    // Support keyboard navigation
+    themeToggle.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        toggleTheme()
+      }
+    })
+  }
 
   // Suggested questions
   document.querySelectorAll('.suggested-item').forEach((button) => {
@@ -235,5 +249,30 @@ async function loadCourseStats() {
       courseTitles.innerHTML =
         '<span class="error">Failed to load courses</span>'
     }
+  }
+}
+
+// Theme Functions
+function initializeTheme() {
+  // Check for saved theme preference or default to dark
+  const savedTheme = localStorage.getItem('theme') || 'dark'
+  setTheme(savedTheme)
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark'
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+  setTheme(newTheme)
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme)
+  localStorage.setItem('theme', theme)
+  
+  // Update button aria-label for accessibility
+  if (themeToggle) {
+    themeToggle.setAttribute('aria-label', 
+      theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'
+    )
   }
 }
