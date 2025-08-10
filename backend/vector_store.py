@@ -95,8 +95,10 @@ class VectorStore:
         filter_dict = self._build_filter(course_title, lesson_number)
         
         # Step 3: Search course content
-        # Use provided limit or fall back to configured max_results
+        # Use provided limit or fall back to configured max_results, ensure it's at least 1
         search_limit = limit if limit is not None else self.max_results
+        if search_limit <= 0:
+            search_limit = 5  # Fallback to reasonable default
         
         try:
             results = self.course_content.query(
