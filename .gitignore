@@ -34,4 +34,4 @@ Thumbs.db
 **/*.log
 
 # Work trees
-.trees/*
+.trees/
