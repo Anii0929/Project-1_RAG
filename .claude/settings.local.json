@@ -11,7 +11,9 @@
       "Bash(uv add:*)",
       "Bash(uv sync:*)",
       "Bash(./check-quality.ps1)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(uv sync:*)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }
