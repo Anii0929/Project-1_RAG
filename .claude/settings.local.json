@@ -8,7 +8,10 @@
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_wait_for",
       "Bash(mkdir:*)",
-      "Bash(uv add:*)"
+      "Bash(uv add:*)",
+      "Bash(uv sync:*)",
+      "Bash(./check-quality.ps1)",
+      "Bash(powershell:*)"
     ],
     "deny": []
   }

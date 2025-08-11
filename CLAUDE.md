@@ -27,11 +27,26 @@ cd backend; uv run uvicorn app:app --reload --port 8000
 ./run.sh
 ```
 
+### Code Quality Commands
+```powershell
+# Format code and fix style issues
+powershell -File ./format.ps1
+
+# Check code quality without making changes (dry-run)
+powershell -File ./quality-check.ps1
+
+# Individual commands
+uv run black backend/ main.py    # Format with black
+uv run isort backend/ main.py    # Sort imports
+uv run flake8 backend/ main.py   # Check style with flake8
+```
+
 ### Development Workflow
 - **Frontend**: Static files served from `frontend/` directory (HTML/CSS/JS)
 - **Backend**: FastAPI server with auto-reload during development
 - **Database**: ChromaDB persisted locally in `backend/chroma_db/`
 - **Logging**: Full logging implementation with appropriate DEBUG and INFO levels throughout the codebase
+- **Code Quality**: Black formatter, isort import sorting, flake8 linting integrated
 
 ## Architecture Overview
 
@@ -78,6 +93,11 @@ The project uses **uv** as the package manager with core dependencies:
 - `sentence-transformers==5.0.0`: Embedding generation
 - `fastapi==0.116.1`: Web framework
 - `uvicorn==0.35.0`: ASGI server
+
+### Code Quality Dependencies
+- `black==24.10.0`: Python code formatter for consistent style
+- `isort==5.13.2`: Import statement sorting and organization
+- `flake8==7.1.1`: Code linting and style checking
 
 ## File Structure Notes
 - `docs/`: Course materials (TXT files processed on startup)

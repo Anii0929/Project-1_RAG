@@ -1,21 +1,22 @@
-from pathlib import Path
-from fastapi.responses import FileResponse
-from fastapi.responses import JSONResponse
-from rag_system import RAGSystem
-from config import config
 import os
-from typing import List, Optional
-from pydantic import BaseModel
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, HTTPException
 import warnings
-warnings.filterwarnings(
-    "ignore", message="resource_tracker: There appear to be.*")
+from pathlib import Path
+from typing import List, Optional
+
+from config import config
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from rag_system import RAGSystem
+
+warnings.filterwarnings("ignore", message="resource_tracker: There appear to be.*")
 
 # Initialize logging
-from logging_config import setup_logging, get_logger
+from logging_config import get_logger, setup_logging
+
 setup_logging(log_level="INFO", log_file="logs/rag_system.log")
 logger = get_logger(__name__)
 
@@ -24,10 +25,7 @@ logger = get_logger(__name__)
 app = FastAPI(title="Course Materials RAG System", root_path="")
 
 # Add trusted host middleware for proxy
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=["*"]
-)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
 # Enable CORS with proper settings for proxy
 app.add_middleware(
@@ -48,17 +46,21 @@ rag_system = RAGSystem(config)
 
 class QueryRequest(BaseModel):
     """Request model for course queries"""
+
     query: str
     session_id: Optional[str] = None
 
 
 class Source(BaseModel):
     """Source information with optional link"""
+
     text: str
     link: Optional[str] = None
 
+
 class QueryResponse(BaseModel):
     """Response model for course queries"""
+
     answer: str
     sources: List[Source]
     session_id: str
@@ -66,8 +68,10 @@ class QueryResponse(BaseModel):
 
 class CourseStats(BaseModel):
     """Response model for course statistics"""
+
     total_courses: int
     course_titles: List[str]
+
 
 # API Endpoints
 
@@ -104,15 +108,15 @@ async def query_documents(request: QueryRequest):
         for source in sources:
             if isinstance(source, dict) and "text" in source:
                 # New format with embedded links
-                source_objects.append(Source(text=source["text"], link=source.get("link")))
+                source_objects.append(
+                    Source(text=source["text"], link=source.get("link"))
+                )
             else:
                 # Legacy string format
                 source_objects.append(Source(text=str(source), link=None))
 
         return QueryResponse(
-            answer=answer,
-            sources=source_objects,
-            session_id=session_id
+            answer=answer, sources=source_objects, session_id=session_id
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -125,7 +129,7 @@ async def get_course_stats():
         analytics = rag_system.get_course_analytics()
         return CourseStats(
             total_courses=analytics["total_courses"],
-            course_titles=analytics["course_titles"]
+            course_titles=analytics["course_titles"],
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -139,12 +143,14 @@ async def startup_event():
         logger.info("Loading initial documents...")
         try:
             courses, chunks = rag_system.add_course_folder(
-                docs_path, clear_existing=False)
+                docs_path, clear_existing=False
+            )
             logger.info(f"Loaded {courses} courses with {chunks} chunks")
         except Exception as e:
             logger.error(f"Error loading documents: {e}")
     else:
         logger.warning(f"Documents directory does not exist: {docs_path}")
+
 
 # Custom static file handler with no-cache headers for development
 
