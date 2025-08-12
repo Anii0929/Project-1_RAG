@@ -8,9 +8,19 @@ load_dotenv()
 @dataclass
 class Config:
     """Configuration settings for the RAG system"""
-    # Anthropic API settings
+    # AI Provider settings - Choose one:
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "ollama")  # ollama, huggingface, openai_compatible, search_only
+    
+    # Anthropic API settings (if using anthropic)
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    
+    # Ollama settings
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama2")
+    
+    # OpenAI Compatible settings  
+    OPENAI_COMPATIBLE_URL: str = os.getenv("OPENAI_COMPATIBLE_URL", "http://localhost:5000/v1")
+    OPENAI_COMPATIBLE_MODEL: str = os.getenv("OPENAI_COMPATIBLE_MODEL", "local-model")
     
     # Embedding model settings
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"

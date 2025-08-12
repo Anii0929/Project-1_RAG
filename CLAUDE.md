@@ -20,7 +20,50 @@ uv run uvicorn app:app --reload --port 8000
 # Install dependencies
 uv sync
 
-# Required environment variable in .env file:
+# Create .env file from example
+cp .env.example .env
+
+# Choose AI provider in .env file:
+# AI_PROVIDER=ollama (recommended - free, local)
+# AI_PROVIDER=huggingface (free, cloud)
+# AI_PROVIDER=search_only (no AI generation)
+# AI_PROVIDER=anthropic (requires API key + credits)
+```
+
+### AI Provider Setup
+
+**Option 1: Ollama (Recommended - Free & Local)**
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull a model
+ollama pull llama2
+
+# Install Python dependency
+uv add ollama
+
+# Set in .env: AI_PROVIDER=ollama
+```
+
+**Option 2: Hugging Face (Free & Cloud)**
+```bash
+# Install dependencies
+uv add transformers torch
+
+# Set in .env: AI_PROVIDER=huggingface
+```
+
+**Option 3: Search Only (No AI costs)**
+```bash
+# No additional setup needed
+# Set in .env: AI_PROVIDER=search_only
+```
+
+**Option 4: Anthropic (Requires credits)**
+```bash
+# Set in .env: 
+# AI_PROVIDER=anthropic
 # ANTHROPIC_API_KEY=your_api_key_here
 ```
 
@@ -87,10 +130,14 @@ Lesson 1: Next Topic
 
 ### Configuration
 All settings centralized in `config.py`:
-- Embedding model: `all-MiniLM-L6-v2`
-- Claude model: `claude-sonnet-4-20250514`
-- Chunk size: 800 characters, 100 overlap
-- Max search results: 5, conversation history: 2
+- **AI Provider**: Configurable via `AI_PROVIDER` environment variable
+  - `ollama`: Local LLM (recommended, free)
+  - `huggingface`: Free transformers models
+  - `search_only`: Search without AI generation
+  - `anthropic`: Claude API (requires credits)
+- **Embedding model**: `all-MiniLM-L6-v2`
+- **Chunk size**: 800 characters, 100 overlap
+- **Max search results**: 5, conversation history: 2
 
 ### Frontend Integration
 Simple HTML/JS frontend (`frontend/`) communicates via:
@@ -107,11 +154,19 @@ On application startup:
 4. FastAPI serves both API endpoints and static frontend files
 
 ### Key Design Decisions
-- **Tool-based search**: Claude decides when to search rather than always searching
+- **Flexible AI providers**: Support for multiple AI backends (local/cloud/free)
+- **Tool-based search**: AI decides when to search rather than always searching (when supported)
 - **Context preservation**: Chunks include course/lesson metadata for better retrieval
 - **Session continuity**: Conversation history maintained for follow-up questions  
-- **Source attribution**: UI shows which course materials were referenced
+- **Source attribution**: UI shows which course materials were referenced with clickable links
 - **Deduplication**: Course titles used as unique identifiers to prevent reprocessing
+- **Cost optimization**: Default to free/local options to avoid API costs
+
+### Troubleshooting
+- **No response or errors**: Check AI provider setup and dependencies
+- **Ollama not working**: Ensure Ollama is installed and model is pulled
+- **Search-only mode**: Returns formatted search results without AI generation
+- **Slow responses**: HuggingFace models may be slower; consider Ollama for better performance
 
 ## Development Best Practices
 - Always use uv to run the server, do not use pip directly

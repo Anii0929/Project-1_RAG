@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Union
 import os
 
 from config import config
@@ -43,7 +43,7 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     """Response model for course queries"""
     answer: str
-    sources: List[str]
+    sources: List[Dict[str, Optional[str]]]
     session_id: str
 
 class CourseStats(BaseModel):
@@ -71,7 +71,18 @@ async def query_documents(request: QueryRequest):
             session_id=session_id
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"ERROR in query_documents: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Handle specific API errors with better user messages
+        error_message = str(e)
+        if "credit balance is too low" in error_message:
+            error_message = "API credit balance is too low. Please add credits to your Anthropic account."
+        elif "authentication" in error_message.lower():
+            error_message = "Invalid API key. Please check your ANTHROPIC_API_KEY in the .env file."
+        
+        raise HTTPException(status_code=500, detail=error_message)
 
 @app.get("/api/courses", response_model=CourseStats)
 async def get_course_stats():
