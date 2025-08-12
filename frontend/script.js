@@ -122,18 +122,18 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
-        // Format sources as clickable links or plain text
+        // Format sources as clickable links or plain text without commas (using flexbox layout)
         const formattedSources = sources.map(source => {
             if (typeof source === 'object' && source.text) {
                 if (source.link) {
                     return `<a href="${source.link}" target="_blank" rel="noopener noreferrer">${source.text}</a>`;
                 } else {
-                    return source.text;
+                    return `<span>${source.text}</span>`;
                 }
             }
             // Fallback for backwards compatibility with string sources
-            return typeof source === 'string' ? source : '';
-        }).filter(s => s).join(', ');
+            return typeof source === 'string' ? `<span>${source}</span>` : '';
+        }).filter(s => s).join('');
 
         html += `
             <details class="sources-collapsible">
