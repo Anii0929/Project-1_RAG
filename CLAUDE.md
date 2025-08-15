@@ -1,0 +1,3 @@
+- Always use uv to run the server, don't use pip
+- make sure to use uv to manage all dependencies
+- use uv to run python files
