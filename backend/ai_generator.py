@@ -10,8 +10,11 @@ class AIGenerator:
 Tool Usage Guidelines:
 - **Content Search Tool**: Use for questions about specific course content or detailed educational materials
 - **Course Outline Tool**: Use for questions about course structure, lesson lists, course overviews, or when users ask "what's in this course"
-- **One tool call per query maximum**
-- Synthesize tool results into accurate, fact-based responses
+- **Sequential Tool Calling**: You can make multiple tool calls across up to 2 rounds of interaction to gather comprehensive information
+- **Round 1**: Use tools to gather initial information
+- **Round 2**: Use additional tools if needed to gather more context, compare information, or clarify details
+- **Reasoning**: After each tool call, analyze results and determine if additional information is needed for a complete answer
+- Synthesize all tool results into accurate, fact-based responses
 - If tools yield no results, state this clearly without offering alternatives
 
 Response Protocol:
@@ -49,15 +52,17 @@ Provide only the direct answer to what was asked.
     def generate_response(self, query: str,
                          conversation_history: Optional[str] = None,
                          tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+                         tool_manager=None,
+                         max_rounds: int = 2) -> str:
         """
-        Generate AI response with optional tool usage and conversation context.
+        Generate AI response with sequential tool usage support and conversation context.
         
         Args:
             query: The user's question or request
             conversation_history: Previous messages for context
             tools: Available tools the AI can use
             tool_manager: Manager to execute tools
+            max_rounds: Maximum sequential tool calls (default: 2)
             
         Returns:
             Generated response as string
@@ -70,31 +75,94 @@ Provide only the direct answer to what was asked.
             else self.SYSTEM_PROMPT
         )
         
-        # Prepare API call parameters efficiently
-        api_params = {
+        # Start with the original user query
+        current_messages = [{"role": "user", "content": query}]
+        
+        # Sequential tool calling loop
+        for round_num in range(max_rounds):
+            # Prepare API call parameters
+            api_params = {
+                **self.base_params,
+                "messages": current_messages.copy(),
+                "system": system_content
+            }
+            
+            # Add tools if available
+            if tools:
+                api_params["tools"] = tools
+                api_params["tool_choice"] = {"type": "auto"}
+            
+            # Get response from Claude
+            response = self.client.messages.create(**api_params)
+            
+            # If no tool use, we're done
+            if response.stop_reason != "tool_use" or not tool_manager:
+                return response.content[0].text
+            
+            # Handle tool execution and update messages
+            current_messages = self._handle_tool_execution_sequential(
+                response, current_messages, tool_manager
+            )
+            
+            # If tool execution failed, return error message
+            if current_messages is None:
+                return "I encountered an error while processing your request."
+        
+        # If we've completed max rounds with tools, make final call without tools
+        final_params = {
             **self.base_params,
-            "messages": [{"role": "user", "content": query}],
+            "messages": current_messages,
             "system": system_content
         }
         
-        # Add tools if available
-        if tools:
-            api_params["tools"] = tools
-            api_params["tool_choice"] = {"type": "auto"}
+        final_response = self.client.messages.create(**final_params)
+        return final_response.content[0].text
+    
+    def _handle_tool_execution_sequential(self, response, messages: List, tool_manager):
+        """
+        Handle tool execution for sequential calling and return updated messages.
         
-        # Get response from Claude
-        response = self.client.messages.create(**api_params)
-        
-        # Handle tool execution if needed
-        if response.stop_reason == "tool_use" and tool_manager:
-            return self._handle_tool_execution(response, api_params, tool_manager)
-        
-        # Return direct response
-        return response.content[0].text
+        Args:
+            response: The response containing tool use requests
+            messages: Current message history
+            tool_manager: Manager to execute tools
+            
+        Returns:
+            Updated messages list or None if tool execution fails
+        """
+        try:
+            # Add AI's tool use response to messages
+            messages.append({"role": "assistant", "content": response.content})
+            
+            # Execute all tool calls and collect results
+            tool_results = []
+            for content_block in response.content:
+                if content_block.type == "tool_use":
+                    tool_result = tool_manager.execute_tool(
+                        content_block.name, 
+                        **content_block.input
+                    )
+                    
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": content_block.id,
+                        "content": tool_result
+                    })
+            
+            # Add tool results as user message
+            if tool_results:
+                messages.append({"role": "user", "content": tool_results})
+            
+            return messages
+            
+        except Exception as e:
+            # Log error and return None to indicate failure
+            print(f"Tool execution error: {e}")
+            return None
     
     def _handle_tool_execution(self, initial_response, base_params: Dict[str, Any], tool_manager):
         """
-        Handle execution of tool calls and get follow-up response.
+        Original single tool execution method - kept for backward compatibility.
         
         Args:
             initial_response: The response containing tool use requests
@@ -104,38 +172,21 @@ Provide only the direct answer to what was asked.
         Returns:
             Final response text after tool execution
         """
-        # Start with existing messages
+        # Use the sequential method but return just the final response
         messages = base_params["messages"].copy()
+        updated_messages = self._handle_tool_execution_sequential(
+            initial_response, messages, tool_manager
+        )
         
-        # Add AI's tool use response
-        messages.append({"role": "assistant", "content": initial_response.content})
+        if updated_messages is None:
+            return "I encountered an error while processing your request."
         
-        # Execute all tool calls and collect results
-        tool_results = []
-        for content_block in initial_response.content:
-            if content_block.type == "tool_use":
-                tool_result = tool_manager.execute_tool(
-                    content_block.name, 
-                    **content_block.input
-                )
-                
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": content_block.id,
-                    "content": tool_result
-                })
-        
-        # Add tool results as single message
-        if tool_results:
-            messages.append({"role": "user", "content": tool_results})
-        
-        # Prepare final API call without tools
+        # Make final call to get response
         final_params = {
             **self.base_params,
-            "messages": messages,
+            "messages": updated_messages,
             "system": base_params["system"]
         }
         
-        # Get final response
         final_response = self.client.messages.create(**final_params)
         return final_response.content[0].text
