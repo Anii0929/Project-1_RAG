@@ -91,7 +91,8 @@ Static files served from `frontend/` with a chat interface that maintains sessio
 - The system expects course documents to follow the structured format for proper parsing
 - Session state is maintained in memory (not persistent across restarts)
 - Vector embeddings use sentence-transformers with the all-MiniLM-L6-v2 model
-- Claude model configured for claude-sonnet-4-20250514 with educational prompt optimization
+ Claude model configured for claude-3-7-sonnet-20250219 with educational prompt optimization
 - always use uv to run the server do not use pip directly
 - make sure to use uv to all dependency
 - use uv to run Python files
+- always think harder and provide a detailed plan and ask for permission  before starting change or edit files.
