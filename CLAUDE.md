@@ -18,6 +18,9 @@ cd backend && uv run uvicorn app:app --reload --port 8000
 # Install dependencies
 uv sync
 
+# Install development dependencies (includes code quality tools)
+uv sync --extra dev
+
 # Environment variables required in .env:
 ANTHROPIC_API_KEY=your_key_here
 ```
@@ -26,6 +29,28 @@ ANTHROPIC_API_KEY=your_key_here
 - Web Interface: http://localhost:8000
 - API Documentation: http://localhost:8000/docs
 - Uses uvicorn with auto-reload for development
+
+### Code Quality Commands
+
+```bash
+# Format all Python code (black + isort)
+uv run black .
+uv run isort .
+
+# Or use the convenience scripts:
+./scripts/format.sh    # or scripts/format.bat on Windows
+
+# Run all quality checks (linting, formatting check, type checking)
+./scripts/lint.sh      # or scripts/lint.bat on Windows
+
+# Quick development workflow (format + lint)
+./scripts/check.sh     # or scripts/check.bat on Windows
+
+# Individual tools:
+uv run flake8 backend/                    # Linting
+uv run black --check backend/             # Format checking
+uv run mypy backend/ --ignore-missing-imports  # Type checking
+```
 
 ## Architecture Overview
 
