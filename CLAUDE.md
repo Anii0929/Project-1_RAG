@@ -14,6 +14,9 @@ cd backend && uv run uvicorn app:app --reload --port 8000
 
 # Install dependencies
 uv sync
+
+# Make run script executable (if needed)
+chmod +x run.sh
 ```
 
 **Environment Setup:**
@@ -25,6 +28,11 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 **Access Points:**
 - Web Interface: http://localhost:8000
 - API Documentation: http://localhost:8000/docs
+
+**Testing & Development:**
+- No specific test framework configured
+- Uses Python 3.13+ with uv package manager
+- All dependencies managed via `pyproject.toml`
 
 ## Architecture Overview
 
@@ -103,4 +111,11 @@ Lesson 2: [lesson title]
 - Application auto-loads documents from `docs/` folder on startup
 - Existing courses are detected to avoid reprocessing
 - ChromaDB collections are persisted in `./chroma_db` directory
-- make sure to use uv to manage all dependencies
+- Use `uv` to manage all dependencies (not pip)
+
+### Development Notes
+- FastAPI server runs on port 8000 with auto-reload enabled
+- Frontend served as static files from `frontend/` directory
+- ChromaDB storage persisted locally in `./chroma_db`
+- Course documents expected in `docs/` folder at startup
+- Environment variables loaded from `.env` file in project root
