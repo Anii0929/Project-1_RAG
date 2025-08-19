@@ -1,20 +1,26 @@
 // API base URL - use relative path to work from any host
 const API_URL = '/api';
 
+console.log('Script loading...');
+
 // Global state
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing...');
     // Get DOM elements after page loads
     chatMessages = document.getElementById('chatMessages');
     chatInput = document.getElementById('chatInput');
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
+    newChatButton = document.getElementById('newChatButton');
+    
+    console.log('newChatButton element:', newChatButton);
     
     setupEventListeners();
     createNewSession();
@@ -29,6 +35,13 @@ function setupEventListeners() {
         if (e.key === 'Enter') sendMessage();
     });
     
+    // New chat button
+    if (newChatButton) {
+        newChatButton.addEventListener('click', clearCurrentChat);
+        console.log('New chat button listener added');
+    } else {
+        console.error('New chat button not found');
+    }
     
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
@@ -160,10 +173,18 @@ function escapeHtml(text) {
 
 // Removed removeMessage function - no longer needed since we handle loading differently
 
-async function createNewSession() {
+function clearCurrentChat() {
+    console.log('clearCurrentChat called');
     currentSessionId = null;
     chatMessages.innerHTML = '';
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+    chatInput.value = '';
+    chatInput.focus();
+    console.log('Chat cleared successfully');
+}
+
+async function createNewSession() {
+    clearCurrentChat();
 }
 
 // Load course statistics

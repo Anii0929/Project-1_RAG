@@ -5,27 +5,30 @@ class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
     
     # Static system prompt to avoid rebuilding on each call
-    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to a comprehensive search tool for course information.
+    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to comprehensive tools for course information.
 
-Search Tool Usage:
-- Use the search tool **only** for questions about specific course content or detailed educational materials
-- **One search per query maximum**
-- Synthesize search results into accurate, fact-based responses
-- If search yields no results, state this clearly without offering alternatives
+Tool Usage Guidelines:
+- **Content Search Tool**: Use for questions about specific course content or detailed educational materials
+- **Course Outline Tool**: Use for questions about course structure, lesson lists, course overview, or when users ask "what lessons are in..." or "show me the outline of..."
+- **One tool call per query maximum**
+- Synthesize tool results into accurate, fact-based responses
+- If tools yield no results, state this clearly without offering alternatives
 
-Response Protocol:
-- **General knowledge questions**: Answer using existing knowledge without searching
-- **Course-specific questions**: Search first, then answer
+Query Types:
+- **General knowledge questions**: Answer using existing knowledge without tools
+- **Course content questions**: Use content search tool first, then answer
+- **Course outline/structure questions**: Use outline tool to get course title, course link, instructor, and complete lesson list with numbers and titles
 - **No meta-commentary**:
- - Provide direct answers only — no reasoning process, search explanations, or question-type analysis
- - Do not mention "based on the search results"
+ - Provide direct answers only — no reasoning process, tool explanations, or question-type analysis
+ - Do not mention "based on the tool results"
 
-
-All responses must be:
+Response Requirements:
 1. **Brief, Concise and focused** - Get to the point quickly
 2. **Educational** - Maintain instructional value
 3. **Clear** - Use accessible language
 4. **Example-supported** - Include relevant examples when they aid understanding
+5. **Complete information** - For outline queries, include course title, course link, instructor, and all lessons with their numbers and titles
+
 Provide only the direct answer to what was asked.
 """
     
@@ -76,15 +79,28 @@ Provide only the direct answer to what was asked.
             api_params["tools"] = tools
             api_params["tool_choice"] = {"type": "auto"}
         
-        # Get response from Claude
-        response = self.client.messages.create(**api_params)
+        # Get response from Claude with error handling
+        try:
+            response = self.client.messages.create(**api_params)
+        except Exception as e:
+            # Log the error and return a meaningful message
+            print(f"Error calling Anthropic API: {type(e).__name__}: {e}")
+            return f"I apologize, but I'm experiencing technical difficulties. Please try your question again."
         
         # Handle tool execution if needed
         if response.stop_reason == "tool_use" and tool_manager:
-            return self._handle_tool_execution(response, api_params, tool_manager)
+            try:
+                return self._handle_tool_execution(response, api_params, tool_manager)
+            except Exception as e:
+                print(f"Error in tool execution: {type(e).__name__}: {e}")
+                return "I encountered an issue while searching for information. Please try rephrasing your question."
         
         # Return direct response
-        return response.content[0].text
+        try:
+            return response.content[0].text
+        except (IndexError, AttributeError) as e:
+            print(f"Error parsing response content: {type(e).__name__}: {e}")
+            return "I received an unexpected response format. Please try your question again."
     
     def _handle_tool_execution(self, initial_response, base_params: Dict[str, Any], tool_manager):
         """
@@ -108,10 +124,14 @@ Provide only the direct answer to what was asked.
         tool_results = []
         for content_block in initial_response.content:
             if content_block.type == "tool_use":
-                tool_result = tool_manager.execute_tool(
-                    content_block.name, 
-                    **content_block.input
-                )
+                try:
+                    tool_result = tool_manager.execute_tool(
+                        content_block.name, 
+                        **content_block.input
+                    )
+                except Exception as e:
+                    print(f"Error executing tool {content_block.name}: {type(e).__name__}: {e}")
+                    tool_result = f"Error executing search: {str(e)}"
                 
                 tool_results.append({
                     "type": "tool_result",
@@ -130,6 +150,10 @@ Provide only the direct answer to what was asked.
             "system": base_params["system"]
         }
         
-        # Get final response
-        final_response = self.client.messages.create(**final_params)
-        return final_response.content[0].text
+        # Get final response with error handling
+        try:
+            final_response = self.client.messages.create(**final_params)
+            return final_response.content[0].text
+        except Exception as e:
+            print(f"Error in final API call: {type(e).__name__}: {e}")
+            return "I encountered an issue while processing the search results. Please try your question again."
