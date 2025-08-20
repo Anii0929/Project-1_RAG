@@ -7,7 +7,7 @@ console.log('Script loading...');
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton, themeToggle;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,10 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
     newChatButton = document.getElementById('newChatButton');
+    themeToggle = document.getElementById('themeToggle');
     
     console.log('newChatButton element:', newChatButton);
     
     setupEventListeners();
+    initializeTheme();
     createNewSession();
     loadCourseStats();
 });
@@ -41,6 +43,18 @@ function setupEventListeners() {
         console.log('New chat button listener added');
     } else {
         console.error('New chat button not found');
+    }
+    
+    // Theme toggle button
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+        // Add keyboard support
+        themeToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
     }
     
     // Suggested questions
@@ -223,4 +237,70 @@ async function loadCourseStats() {
             courseTitles.innerHTML = '<span class="error">Failed to load courses</span>';
         }
     }
+}
+
+// Theme Management Functions
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    saveTheme(newTheme);
+}
+
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    
+    // Update button visual state
+    if (themeToggle) {
+        if (theme === 'light') {
+            themeToggle.classList.add('light-mode');
+            themeToggle.setAttribute('aria-label', 'Switch to dark mode');
+        } else {
+            themeToggle.classList.remove('light-mode');
+            themeToggle.setAttribute('aria-label', 'Switch to light mode');
+        }
+    }
+    
+    // Update CSS variables for light theme
+    if (theme === 'light') {
+        document.documentElement.style.setProperty('--primary-color', '#2563eb');
+        document.documentElement.style.setProperty('--primary-hover', '#1d4ed8');
+        document.documentElement.style.setProperty('--background', '#ffffff');
+        document.documentElement.style.setProperty('--surface', '#f8fafc');
+        document.documentElement.style.setProperty('--surface-hover', '#f1f5f9');
+        document.documentElement.style.setProperty('--text-primary', '#0f172a');
+        document.documentElement.style.setProperty('--text-secondary', '#475569');
+        document.documentElement.style.setProperty('--border-color', '#e2e8f0');
+        document.documentElement.style.setProperty('--user-message', '#2563eb');
+        document.documentElement.style.setProperty('--assistant-message', '#f8fafc');
+        document.documentElement.style.setProperty('--shadow', '0 4px 6px -1px rgba(0, 0, 0, 0.1)');
+        document.documentElement.style.setProperty('--focus-ring', 'rgba(37, 99, 235, 0.2)');
+        document.documentElement.style.setProperty('--welcome-bg', '#eff6ff');
+        document.documentElement.style.setProperty('--welcome-border', '#2563eb');
+    } else {
+        // Reset to dark theme (default CSS variables)
+        document.documentElement.style.setProperty('--primary-color', '#2563eb');
+        document.documentElement.style.setProperty('--primary-hover', '#1d4ed8');
+        document.documentElement.style.setProperty('--background', '#0f172a');
+        document.documentElement.style.setProperty('--surface', '#1e293b');
+        document.documentElement.style.setProperty('--surface-hover', '#334155');
+        document.documentElement.style.setProperty('--text-primary', '#f1f5f9');
+        document.documentElement.style.setProperty('--text-secondary', '#94a3b8');
+        document.documentElement.style.setProperty('--border-color', '#334155');
+        document.documentElement.style.setProperty('--user-message', '#2563eb');
+        document.documentElement.style.setProperty('--assistant-message', '#374151');
+        document.documentElement.style.setProperty('--shadow', '0 4px 6px -1px rgba(0, 0, 0, 0.3)');
+        document.documentElement.style.setProperty('--focus-ring', 'rgba(37, 99, 235, 0.2)');
+        document.documentElement.style.setProperty('--welcome-bg', '#1e3a5f');
+        document.documentElement.style.setProperty('--welcome-border', '#2563eb');
+    }
+}
+
+function saveTheme(theme) {
+    localStorage.setItem('theme', theme);
 }
