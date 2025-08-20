@@ -30,9 +30,49 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 - API Documentation: http://localhost:8000/docs
 
 **Testing & Development:**
-- No specific test framework configured
+- Uses pytest framework with tests in `backend/tests/`
 - Uses Python 3.13+ with uv package manager
 - All dependencies managed via `pyproject.toml`
+
+## Code Quality & Development Workflow
+
+**Essential Commands:**
+```bash
+# Install all dependencies (including dev tools)
+uv sync --group dev
+
+# Format code (black + isort)
+./scripts/format.sh
+
+# Run linting checks
+./scripts/lint.sh
+
+# Comprehensive quality check (format, lint, test)
+./scripts/check-quality.sh
+```
+
+**Code Quality Tools:**
+- **Black**: Automatic code formatting with 88-character line length
+- **isort**: Import sorting compatible with Black's style
+- **flake8**: Linting for code quality and style consistency
+- **pytest**: Unit testing framework
+
+**Development Workflow:**
+1. **Before making changes**: Run `./scripts/check-quality.sh` to ensure clean baseline
+2. **During development**: Use `./scripts/format.sh` to auto-format code
+3. **Before committing**: Run `./scripts/check-quality.sh` to catch issues
+4. **Code style**: All code automatically formatted to Black standards (88 chars)
+
+**Quality Standards:**
+- All Python code formatted with Black (line length: 88)
+- Imports organized with isort (Black-compatible profile)
+- Code passes flake8 linting (E203, W503 ignored for Black compatibility)
+- Comprehensive test coverage in `backend/tests/`
+- No unused imports or variables in production code
+
+**Configuration Files:**
+- `pyproject.toml`: Black, isort, and project configuration
+- `scripts/`: Development automation scripts for quality checks
 
 ## Architecture Overview
 
