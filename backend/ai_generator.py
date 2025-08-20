@@ -5,21 +5,54 @@ class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
     
     # Static system prompt to avoid rebuilding on each call
-    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to a comprehensive search tool for course information.
+    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to comprehensive tools for course information.
 
-Search Tool Usage:
-- Use the search tool **only** for questions about specific course content or detailed educational materials
-- **One search per query maximum**
-- Synthesize search results into accurate, fact-based responses
-- If search yields no results, state this clearly without offering alternatives
+Available Tools:
+1. **search_course_content**: Search for specific content within course materials
+   - Use for questions about topics, concepts, or specific lesson content
+   - Can filter by course name and lesson number
+   
+2. **get_course_outline**: Get the complete structure of a course
+   - Use for questions about course organization, lesson lists, or course overviews
+   - Returns course title, link, and complete lesson list with numbers and titles
+
+Multi-Step Tool Usage:
+- You can use tools sequentially across up to 2 rounds to gather comprehensive information
+- Round 1: Gather initial information (e.g., get course outline to see lesson structure)
+- Round 2: Use results from round 1 for targeted actions (e.g., search specific lesson content)
+- Each round allows you to reason about previous results before making the next tool call
+
+Sequential Tool Patterns:
+1. **Exploration → Refinement**: First get overview, then search for specifics
+   - Example: Get course outline → Search for content in specific lesson
+2. **Comparison**: Search different courses/lessons to compare content
+   - Example: Search topic in course A → Search same topic in course B
+3. **Multi-part questions**: Address each part with appropriate tool calls
+   - Example: Find lesson title → Search for related content in other courses
+
+Tool Usage Examples:
+- "What does lesson 4 of course X teach?" → get_course_outline (find lesson 4 title) → search_course_content (search that topic)
+- "Compare Python basics across courses" → search_course_content for course A → search_course_content for course B
+- "Find courses covering similar topics as course X lesson 3" → get_course_outline → search_course_content for identified topics
+
+Tool Usage Guidelines:
+- **Course outline/structure questions**: Use get_course_outline tool
+- **Content-specific questions**: Use search_course_content tool
+- **Complex queries**: Use multiple tool calls sequentially (up to 2 rounds)
+- Synthesize tool results into accurate, fact-based responses
+- If tools yield no results, state this clearly without offering alternatives
 
 Response Protocol:
-- **General knowledge questions**: Answer using existing knowledge without searching
-- **Course-specific questions**: Search first, then answer
+- **General knowledge questions**: Answer using existing knowledge without tools
+- **Course-specific questions**: Use appropriate tool(s), then provide comprehensive answer
 - **No meta-commentary**:
- - Provide direct answers only — no reasoning process, search explanations, or question-type analysis
- - Do not mention "based on the search results"
+ - Provide direct answers only — no reasoning process, tool explanations, or question-type analysis
+ - Do not mention "based on the search results" or "using the outline tool"
 
+Formatting Course Outlines:
+- Present course title, link, and lesson count clearly
+- List lessons with their numbers and titles in order
+- Keep formatting clean and readable
 
 All responses must be:
 1. **Brief, Concise and focused** - Get to the point quickly
@@ -30,7 +63,14 @@ Provide only the direct answer to what was asked.
 """
     
     def __init__(self, api_key: str, model: str):
-        self.client = anthropic.Anthropic(api_key=api_key)
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY is required but not found in environment. Please add it to your .env file.")
+        
+        try:
+            self.client = anthropic.Anthropic(api_key=api_key)
+        except Exception as e:
+            raise ValueError(f"Failed to initialize Anthropic client: {e}")
+        
         self.model = model
         
         # Pre-build base API parameters
@@ -86,50 +126,83 @@ Provide only the direct answer to what was asked.
         # Return direct response
         return response.content[0].text
     
-    def _handle_tool_execution(self, initial_response, base_params: Dict[str, Any], tool_manager):
+    def _handle_tool_execution(self, initial_response, base_params: Dict[str, Any], tool_manager, max_rounds: int = 2):
         """
-        Handle execution of tool calls and get follow-up response.
+        Handle sequential tool execution with up to max_rounds of tool calls.
         
         Args:
             initial_response: The response containing tool use requests
-            base_params: Base API parameters
+            base_params: Base API parameters including tools
             tool_manager: Manager to execute tools
+            max_rounds: Maximum number of tool-calling rounds (default: 2)
             
         Returns:
-            Final response text after tool execution
+            Final response text after all tool executions
         """
         # Start with existing messages
         messages = base_params["messages"].copy()
+        current_response = initial_response
+        tools = base_params.get("tools", [])
         
-        # Add AI's tool use response
-        messages.append({"role": "assistant", "content": initial_response.content})
+        for round_num in range(1, max_rounds + 1):
+            # Add assistant's tool use response
+            messages.append({"role": "assistant", "content": current_response.content})
+            
+            # Execute all tool calls and collect results
+            tool_results = []
+            for content_block in current_response.content:
+                if content_block.type == "tool_use":
+                    try:
+                        tool_result = tool_manager.execute_tool(
+                            content_block.name,
+                            **content_block.input
+                        )
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": tool_result
+                        })
+                    except Exception as e:
+                        # Handle tool execution errors gracefully
+                        print(f"Tool execution error in round {round_num}: {e}")
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": f"Tool execution failed: {str(e)}"
+                        })
+            
+            # Add tool results to messages
+            if tool_results:
+                messages.append({"role": "user", "content": tool_results})
+            
+            # Check if we've reached max rounds or should make final call
+            if round_num >= max_rounds:
+                # Final round reached - make final call without tools
+                break
+            
+            # Prepare next API call WITH tools still available for potential round 2
+            next_params = {
+                **self.base_params,
+                "messages": messages,
+                "system": base_params["system"],
+                "tools": tools,
+                "tool_choice": {"type": "auto"}
+            }
+            
+            # Get next response to see if Claude wants to use more tools
+            current_response = self.client.messages.create(**next_params)
+            
+            # Check if Claude wants to use more tools
+            if current_response.stop_reason != "tool_use":
+                # No more tool use needed, return the response
+                return current_response.content[0].text
         
-        # Execute all tool calls and collect results
-        tool_results = []
-        for content_block in initial_response.content:
-            if content_block.type == "tool_use":
-                tool_result = tool_manager.execute_tool(
-                    content_block.name, 
-                    **content_block.input
-                )
-                
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": content_block.id,
-                    "content": tool_result
-                })
-        
-        # Add tool results as single message
-        if tool_results:
-            messages.append({"role": "user", "content": tool_results})
-        
-        # Prepare final API call without tools
+        # Final API call without tools to get the synthesized answer
         final_params = {
             **self.base_params,
             "messages": messages,
             "system": base_params["system"]
         }
         
-        # Get final response
         final_response = self.client.messages.create(**final_params)
         return final_response.content[0].text

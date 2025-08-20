@@ -88,6 +88,13 @@ async def get_course_stats():
 @app.on_event("startup")
 async def startup_event():
     """Load initial documents on startup"""
+    # Validate configuration
+    if not config.ANTHROPIC_API_KEY:
+        print("⚠️  WARNING: No ANTHROPIC_API_KEY found. AI features will not work!")
+        print("  Please add your API key to backend/.env file")
+    else:
+        print("✓ API key configured")
+    
     docs_path = "../docs"
     if os.path.exists(docs_path):
         print("Loading initial documents...")
@@ -101,7 +108,6 @@ async def startup_event():
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
-from pathlib import Path
 
 
 class DevStaticFiles(StaticFiles):
