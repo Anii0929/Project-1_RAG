@@ -1,0 +1,25 @@
+{
+  "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+  "python.terminal.activateEnvironment": true,
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.formatting.provider": "black",
+  "python.sortImports.args": ["--profile", "black"],
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/chroma_db": true,
+    "**/.uv": true
+  },
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": true,
+  "python.testing.unittestArgs": ["-v", "-s", "./tests", "-p", "test_*.py"],
+  "python.envFile": "${workspaceFolder}/.env"
+}

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "mcp__playwright__browser_navigate",
+      "Bash(uv run:*)",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_wait_for",
+      "Bash(mkdir:*)",
+      "Bash(uv add:*)",
+      "Bash(uv sync:*)",
+      "Bash(./check-quality.ps1)",
+      "Bash(powershell:*)",
+      "Bash(uv sync:*)",
+      "Bash(git merge:*)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Read|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo done"
+          }
+        ]
+      }
+    ]
+  }
+}

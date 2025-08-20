@@ -1,0 +1,15 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.flake8",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-toolsai.jupyter",
+        "ms-vscode.vscode-json",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.live-server",
+        "humao.rest-client",
+        "ms-python.debugpy"
+    ]
+}
