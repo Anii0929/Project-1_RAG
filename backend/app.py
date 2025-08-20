@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 
 # Initialize FastAPI app
-app = FastAPI(title="Course Materials RAG System", root_path="")
+app = FastAPI(title="Document Materials RAG System", root_path="")
 
 # Add trusted host middleware for proxy
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
@@ -38,14 +38,14 @@ app.add_middleware(
 )
 
 # Initialize RAG system
-logger.info("Starting Course Materials RAG System")
+logger.info("Starting Document Materials RAG System")
 rag_system = RAGSystem(config)
 
 # Pydantic models for request/response
 
 
 class QueryRequest(BaseModel):
-    """Request model for course queries"""
+    """Request model for document queries"""
 
     query: str
     session_id: Optional[str] = None
@@ -59,18 +59,18 @@ class Source(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """Response model for course queries"""
+    """Response model for document queries"""
 
     answer: str
     sources: List[Source]
     session_id: str
 
 
-class CourseStats(BaseModel):
-    """Response model for course statistics"""
+class DocumentStats(BaseModel):
+    """Response model for document statistics"""
 
-    total_courses: int
-    course_titles: List[str]
+    total_documents: int
+    document_titles: List[str]
 
 
 # API Endpoints
@@ -122,14 +122,14 @@ async def query_documents(request: QueryRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/courses", response_model=CourseStats)
-async def get_course_stats():
-    """Get course analytics and statistics"""
+@app.get("/api/documents", response_model=DocumentStats)
+async def get_document_stats():
+    """Get document analytics and statistics"""
     try:
-        analytics = rag_system.get_course_analytics()
-        return CourseStats(
-            total_courses=analytics["total_courses"],
-            course_titles=analytics["course_titles"],
+        analytics = rag_system.get_document_analytics()
+        return DocumentStats(
+            total_documents=analytics["total_documents"],
+            document_titles=analytics["document_titles"],
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -142,10 +142,10 @@ async def startup_event():
     if os.path.exists(docs_path):
         logger.info("Loading initial documents...")
         try:
-            courses, chunks = rag_system.add_course_folder(
+            documents, chunks = rag_system.add_document_folder(
                 docs_path, clear_existing=False
             )
-            logger.info(f"Loaded {courses} courses with {chunks} chunks")
+            logger.info(f"Loaded {documents} documents with {chunks} chunks")
         except Exception as e:
             logger.error(f"Error loading documents: {e}")
     else:

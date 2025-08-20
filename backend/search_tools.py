@@ -21,8 +21,8 @@ class Tool(ABC):
         pass
 
 
-class CourseSearchTool(Tool):
-    """Tool for searching course content with semantic course name matching"""
+class DocumentSearchTool(Tool):
+    """Tool for searching document content with semantic document name matching"""
 
     def __init__(self, vector_store: VectorStore):
         self.store = vector_store
@@ -31,22 +31,22 @@ class CourseSearchTool(Tool):
     def get_tool_definition(self) -> Dict[str, Any]:
         """Return Anthropic tool definition for this tool"""
         return {
-            "name": "search_course_content",
-            "description": "Search course materials with smart course name matching and lesson filtering",
+            "name": "search_document_content",
+            "description": "Search document materials with smart document name matching and section filtering",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "What to search for in the course content",
+                        "description": "What to search for in the document content",
                     },
-                    "course_name": {
+                    "document_name": {
                         "type": "string",
-                        "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')",
+                        "description": "Document title (partial matches work, e.g. 'MCP', 'Introduction')",
                     },
-                    "lesson_number": {
+                    "section_number": {
                         "type": "integer",
-                        "description": "Specific lesson number to search within (e.g. 1, 2, 3)",
+                        "description": "Specific section number to search within (e.g. 1, 2, 3)",
                     },
                 },
                 "required": ["query"],
@@ -56,16 +56,16 @@ class CourseSearchTool(Tool):
     def execute(
         self,
         query: str,
-        course_name: Optional[str] = None,
-        lesson_number: Optional[int] = None,
+        document_name: Optional[str] = None,
+        section_number: Optional[int] = None,
     ) -> str:
         """
         Execute the search tool with given parameters.
 
         Args:
             query: What to search for
-            course_name: Optional course filter
-            lesson_number: Optional lesson filter
+            document_name: Optional document filter
+            section_number: Optional section filter
 
         Returns:
             Formatted search results or error message
@@ -73,7 +73,7 @@ class CourseSearchTool(Tool):
 
         # Use the vector store's unified search interface
         results = self.store.search(
-            query=query, course_name=course_name, lesson_number=lesson_number
+            query=query, document_name=document_name, section_number=section_number
         )
 
         # Handle errors
@@ -83,45 +83,45 @@ class CourseSearchTool(Tool):
         # Handle empty results
         if results.is_empty():
             filter_info = ""
-            if course_name:
-                filter_info += f" in course '{course_name}'"
-            if lesson_number:
-                filter_info += f" in lesson {lesson_number}"
+            if document_name:
+                filter_info += f" in document '{document_name}'"
+            if section_number:
+                filter_info += f" in section {section_number}"
             return f"No relevant content found{filter_info}."
 
         # Format and return results
         return self._format_results(results)
 
     def _format_results(self, results: SearchResults) -> str:
-        """Format search results with course and lesson context"""
+        """Format search results with document and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI with embedded links
 
         for doc, meta in zip(results.documents, results.metadata):
-            course_title = meta.get("course_title", "unknown")
-            lesson_num = meta.get("lesson_number")
+            document_title = meta.get("document_title", "unknown")
+            section_num = meta.get("section_number")
 
             # Build context header
-            header = f"[{course_title}"
-            if lesson_num is not None:
-                header += f" - Lesson {lesson_num}"
+            header = f"[{document_title}"
+            if section_num is not None:
+                header += f" - Section {section_num}"
             header += "]"
 
-            # Get lesson link if available
-            lesson_link = None
-            if lesson_num is not None:
-                lesson_link = self.store.get_lesson_link(course_title, lesson_num)
+            # Get section link if available
+            section_link = None
+            if section_num is not None:
+                section_link = self.store.get_section_link(document_title, section_num)
                 logger.debug(
-                    f"Retrieved lesson link for '{course_title}' Lesson {lesson_num}: {lesson_link}"
+                    f"Retrieved section link for '{document_title}' Section {section_num}: {section_link}"
                 )
 
             # Create source entry with embedded link information
-            source_text = course_title
-            if lesson_num is not None:
-                source_text += f" - Lesson {lesson_num}"
+            source_text = document_title
+            if section_num is not None:
+                source_text += f" - Section {section_num}"
 
             # Create source object with both display text and link
-            source_entry = {"text": source_text, "link": lesson_link}
+            source_entry = {"text": source_text, "link": section_link}
             sources.append(source_entry)
 
             formatted.append(f"{header}\n{doc}")
@@ -129,14 +129,14 @@ class CourseSearchTool(Tool):
         # Store sources for retrieval
         self.last_sources = sources
         logger.info(
-            f"Formatted {len(sources)} search results with embedded lesson links"
+            f"Formatted {len(sources)} search results with embedded section links"
         )
 
         return "\n\n".join(formatted)
 
 
-class CourseOutlineTool(Tool):
-    """Tool for retrieving course outlines with lesson information"""
+class DocumentOutlineTool(Tool):
+    """Tool for retrieving document outlines with lesson information"""
 
     def __init__(self, vector_store: VectorStore):
         self.store = vector_store
@@ -144,65 +144,109 @@ class CourseOutlineTool(Tool):
     def get_tool_definition(self) -> Dict[str, Any]:
         """Return Anthropic tool definition for this tool"""
         return {
-            "name": "get_course_outline",
-            "description": "Get course outline including course title, link, and complete lesson list",
+            "name": "get_document_outline",
+            "description": "Get document outline including document title, link, and complete section list",
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "course_title": {
+                    "document_title": {
                         "type": "string",
-                        "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')",
+                        "description": "Document title (partial matches work, e.g. 'MCP', 'Introduction')",
                     }
                 },
-                "required": ["course_title"],
+                "required": ["document_title"],
             },
         }
 
-    def execute(self, course_title: str) -> str:
+    def execute(self, document_title: str) -> str:
         """
-        Execute the outline tool to get course information.
+        Execute the outline tool to get document information.
 
         Args:
-            course_title: Course title to get outline for
+            document_title: Document title to get outline for
 
         Returns:
-            Formatted course outline or error message
+            Formatted document outline or error message
         """
-        # Use vector search to find the best matching course
-        resolved_title = self.store._resolve_course_name(course_title)
+        # Use vector search to find the best matching document
+        resolved_title = self.store._resolve_document_name(document_title)
         if not resolved_title:
-            return f"No course found matching '{course_title}'"
+            return f"No document found matching '{document_title}'"        
+        
 
-        # Get course metadata including lessons
+        # Get document metadata including lessons
         import json
 
         try:
-            results = self.store.course_catalog.get(ids=[resolved_title])
+            results = self.store.document_catalog.get(ids=[resolved_title])
             if not results or not results.get("metadatas"):
-                return f"No course metadata found for '{resolved_title}'"
+                return f"No document metadata found for '{resolved_title}'"        
+        
 
             metadata = results["metadatas"][0]
-            course_link = metadata.get("course_link", "No link available")
-            lessons_json = metadata.get("lessons_json", "[]")
-            lessons = json.loads(lessons_json)
+            document_link = metadata.get("document_link", "No link available")
+            sections_json = metadata.get("sections_json", "[]")
+            sections = json.loads(sections_json)
 
             # Format the response
-            outline = f"**Course:** {resolved_title}\n"
-            outline += f"**Course Link:** {course_link}\n\n"
-            outline += "**Lessons:**\n"
+            outline = f"**Document:** {resolved_title}\n"
+            outline += f"**Document Link:** {document_link}\n\n"
+            outline += "**Sections:**\n"
 
-            if not lessons:
-                outline += "No lessons available"
+            if not sections:
+                outline += "No sections available"
             else:
-                for lesson in lessons:
-                    lesson_num = lesson.get("lesson_number", "N/A")
-                    lesson_title = lesson.get("lesson_title", "Untitled")
-                    outline += f"{lesson_num}. {lesson_title}\n"
+                for section in sections:
+                    section_num = section.get("section_number", "N/A")
+                    section_title = section.get("section_title", "Untitled")
+                    outline += f"{section_num}. {section_title}\n"
 
             return outline
 
         except Exception as e:
-            return f"Error retrieving course outline: {str(e)}"
+            return f"Error retrieving document outline: {str(e)}"
+
+
+class DocumentListTool(Tool):
+    """Tool for listing all available document titles"""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        """Return Anthropic tool definition for this tool"""
+        return {
+            "name": "list_all_documents",
+            "description": "Get a complete list of all available document titles in the knowledge base",
+            "input_schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        }
+
+    def execute(self) -> str:
+        """
+        Execute the tool to list all document titles.
+
+        Returns:
+            Formatted list of all available document titles
+        """
+        try:
+            document_titles = self.store.get_existing_document_titles()
+            
+            if not document_titles:
+                return "No documents are currently available in the knowledge base."
+            
+            # Format as numbered list
+            formatted_list = []
+            for i, title in enumerate(document_titles, 1):
+                formatted_list.append(f"{i}. {title}")
+            
+            return f"Available documents ({len(document_titles)} total):\n\n" + "\n".join(formatted_list)
+            
+        except Exception as e:
+            return f"Error retrieving document list: {str(e)}"
 
 
 class ToolManager:

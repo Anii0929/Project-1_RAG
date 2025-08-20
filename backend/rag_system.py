@@ -4,8 +4,8 @@ from typing import Dict, List, Optional, Tuple
 from ai_generator import AIGenerator
 from document_processor import DocumentProcessor
 from logging_config import get_logger
-from models import Course, CourseChunk, Lesson
-from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager
+from models import Document, DocumentChunk, Section
+from search_tools import DocumentListTool, DocumentOutlineTool, DocumentSearchTool, ToolManager
 from session_manager import SessionManager
 from vector_store import VectorStore
 
@@ -41,66 +41,68 @@ class RAGSystem:
         # Initialize search tools
         logger.debug("Setting up search tools")
         self.tool_manager = ToolManager()
-        self.search_tool = CourseSearchTool(self.vector_store)
-        self.outline_tool = CourseOutlineTool(self.vector_store)
+        self.search_tool = DocumentSearchTool(self.vector_store)
+        self.outline_tool = DocumentOutlineTool(self.vector_store)
+        self.list_tool = DocumentListTool(self.vector_store)
         self.tool_manager.register_tool(self.search_tool)
         self.tool_manager.register_tool(self.outline_tool)
+        self.tool_manager.register_tool(self.list_tool)
 
         logger.info("RAG System initialization complete")
 
-    def add_course_document(self, file_path: str) -> Tuple[Course, int]:
+    def add_document(self, file_path: str) -> Tuple[Document, int]:
         """
-        Add a single course document to the knowledge base.
+        Add a single document to the knowledge base.
 
         Args:
-            file_path: Path to the course document
+            file_path: Path to the document
 
         Returns:
-            Tuple of (Course object, number of chunks created)
+            Tuple of (Document object, number of chunks created)
         """
-        logger.info(f"Adding course document: {file_path}")
+        logger.info(f"Adding document: {file_path}")
         try:
             # Process the document
-            course, course_chunks = self.document_processor.process_course_document(
+            document, document_chunks = self.document_processor.process_document(
                 file_path
             )
 
-            if course:
-                # Add course metadata to vector store for semantic search
-                self.vector_store.add_course_metadata(course)
+            if document:
+                # Add document metadata to vector store for semantic search
+                self.vector_store.add_document_metadata(document)
 
-                # Add course content chunks to vector store
-                self.vector_store.add_course_content(course_chunks)
+                # Add document content chunks to vector store
+                self.vector_store.add_document_content(document_chunks)
 
                 logger.info(
-                    f"Successfully added course document: '{course.title}' with {len(course_chunks)} chunks"
+                    f"Successfully added document: '{document.title}' with {len(document_chunks)} chunks"
                 )
-                return course, len(course_chunks)
+                return document, len(document_chunks)
             else:
-                logger.warning(f"No course object created from document: {file_path}")
+                logger.warning(f"No document object created from document: {file_path}")
                 return None, 0
 
         except Exception as e:
-            logger.error(f"Error processing course document {file_path}: {e}")
+            logger.error(f"Error processing document {file_path}: {e}")
             return None, 0
 
-    def add_course_folder(
+    def add_document_folder(
         self, folder_path: str, clear_existing: bool = False
     ) -> Tuple[int, int]:
         """
-        Add all course documents from a folder.
+        Add all documents from a folder.
 
         Args:
-            folder_path: Path to folder containing course documents
+            folder_path: Path to folder containing documents
             clear_existing: Whether to clear existing data first
 
         Returns:
-            Tuple of (total courses added, total chunks created)
+            Tuple of (total documents added, total chunks created)
         """
         logger.info(
-            f"=== Processing course folder: {folder_path} (clear_existing={clear_existing}) ==="
+            f"=== Processing document folder: {folder_path} (clear_existing={clear_existing}) ==="
         )
-        total_courses = 0
+        total_documents = 0
         total_chunks = 0
 
         # Clear existing data if requested
@@ -112,10 +114,10 @@ class RAGSystem:
             logger.error(f"Folder {folder_path} does not exist")
             return 0, 0
 
-        # Get existing course titles to avoid re-processing
-        existing_course_titles = set(self.vector_store.get_existing_course_titles())
+        # Get existing document titles to avoid re-processing
+        existing_document_titles = set(self.vector_store.get_existing_document_titles())
         logger.info(
-            f"Found {len(existing_course_titles)} existing courses in vector store"
+            f"Found {len(existing_document_titles)} existing documents in vector store"
         )
 
         # Get all files to process
@@ -132,36 +134,36 @@ class RAGSystem:
             file_path = os.path.join(folder_path, file_name)
             logger.debug(f"Processing file: {file_name}")
             try:
-                # Check if this course might already exist
-                # We'll process the document to get the course ID, but only add if new
-                course, course_chunks = self.document_processor.process_course_document(
+                # Check if this document might already exist
+                # We'll process the document to get the document ID, but only add if new
+                document, document_chunks = self.document_processor.process_document(
                     file_path
                 )
 
-                if course and course.title not in existing_course_titles:
-                    # This is a new course - add it to the vector store
-                    logger.info(f"Adding new course to vector store: '{course.title}'")
-                    self.vector_store.add_course_metadata(course)
-                    self.vector_store.add_course_content(course_chunks)
-                    total_courses += 1
-                    total_chunks += len(course_chunks)
+                if document and document.title not in existing_document_titles:
+                    # This is a new document - add it to the vector store
+                    logger.info(f"Adding new document to vector store: '{document.title}'")
+                    self.vector_store.add_document_metadata(document)
+                    self.vector_store.add_document_content(document_chunks)
+                    total_documents += 1
+                    total_chunks += len(document_chunks)
                     logger.info(
-                        f"Added new course: {course.title} ({len(course_chunks)} chunks)"
+                        f"Added new document: {document.title} ({len(document_chunks)} chunks)"
                     )
-                    existing_course_titles.add(course.title)
-                elif course:
-                    logger.info(f"Course already exists: {course.title} - skipping")
+                    existing_document_titles.add(document.title)
+                elif document:
+                    logger.info(f"Document already exists: {document.title} - skipping")
                 else:
                     logger.warning(
-                        f"Failed to create course object from file: {file_name}"
+                        f"Failed to create document object from file: {file_name}"
                     )
             except Exception as e:
                 logger.error(f"Error processing {file_name}: {e}")
 
         logger.info(
-            f"=== Folder processing complete: {total_courses} new courses, {total_chunks} total chunks ==="
+            f"=== Folder processing complete: {total_documents} new documents, {total_chunks} total chunks ==="
         )
-        return total_courses, total_chunks
+        return total_documents, total_chunks
 
     def query(
         self, query: str, session_id: Optional[str] = None
@@ -177,7 +179,7 @@ class RAGSystem:
             Tuple of (response, sources list - empty for tool-based approach)
         """
         # Create prompt for the AI with clear instructions
-        prompt = f"""Answer this question about course materials: {query}"""
+        prompt = f"""Answer this question about document materials: {query}"""
 
         # Get conversation history if session exists
         history = None
@@ -205,9 +207,9 @@ class RAGSystem:
         # Return response with sources from tool searches
         return response, sources
 
-    def get_course_analytics(self) -> Dict:
-        """Get analytics about the course catalog"""
+    def get_document_analytics(self) -> Dict:
+        """Get analytics about the document catalog"""
         return {
-            "total_courses": self.vector_store.get_course_count(),
-            "course_titles": self.vector_store.get_existing_course_titles(),
+            "total_documents": self.vector_store.get_document_count(),
+            "document_titles": self.vector_store.get_existing_document_titles(),
         }

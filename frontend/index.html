@@ -42,17 +42,17 @@
               NEW CHAT
             </button>
           </div>
-          <!-- Course Stats -->
+          <!-- Document Stats -->
           <div class="sidebar-section">
             <details class="stats-collapsible">
-              <summary class="stats-header">Courses</summary>
-              <div class="course-stats" id="courseStats">
+              <summary class="stats-header">Documents</summary>
+              <div class="document-stats" id="documentStats">
                 <div class="stat-item">
-                  <span class="stat-label">Number of courses:</span>
-                  <span class="stat-value" id="totalCourses">-</span>
+                  <span class="stat-label">Number of documents:</span>
+                  <span class="stat-value" id="totalDocuments">-</span>
                 </div>
                 <div class="stat-item">
-                  <div class="course-titles" id="courseTitles">
+                  <div class="document-titles" id="documentTitles">
                     <span class="loading">Loading...</span>
                   </div>
                 </div>
@@ -67,27 +67,33 @@
               <div class="suggested-items">
                 <button
                   class="suggested-item"
-                  data-question='What is the outline of the "MCP: Build Rich-Context AI Apps with Anthropic" course?'
+                  data-question="What are the titles of all available documents?"
                 >
-                  Outline of a course
+                  List available documents
                 </button>
                 <button
                   class="suggested-item"
-                  data-question="Are there any courses that include a Chatbot implementation?"
+                  data-question='What is the outline of the "MCP: Build Rich-Context AI Apps with Anthropic" document?'
                 >
-                  Courses about Chatbot
+                  Outline of a document
                 </button>
                 <button
                   class="suggested-item"
-                  data-question="Are there any courses that explain what RAG is?"
+                  data-question="Are there any documents that include a Chatbot implementation?"
                 >
-                  Courses explaining RAG
+                  Documents about Chatbot
                 </button>
                 <button
                   class="suggested-item"
-                  data-question="What was covered in lesson 5 of the MCP course?"
+                  data-question="Are there any documents that explain what RAG is?"
                 >
-                  Details of a course's lesson
+                  Documents explaining RAG
+                </button>
+                <button
+                  class="suggested-item"
+                  data-question="What was covered in section 5 of the MCP document?"
+                >
+                  Details of a document's section
                 </button>
               </div>
             </details>
@@ -102,7 +108,7 @@
               <input
                 type="text"
                 id="chatInput"
-                placeholder="Ask about courses, lessons, or specific content..."
+                placeholder="Ask about documents, sections, or specific content..."
                 autocomplete="off"
               />
               <button id="sendButton">

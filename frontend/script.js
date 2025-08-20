@@ -5,7 +5,7 @@ const API_URL = '/api'
 let currentSessionId = null
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles, themeToggle
+let chatMessages, chatInput, sendButton, totalDocuments, documentTitles, themeToggle
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,14 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
   chatMessages = document.getElementById('chatMessages')
   chatInput = document.getElementById('chatInput')
   sendButton = document.getElementById('sendButton')
-  totalCourses = document.getElementById('totalCourses')
-  courseTitles = document.getElementById('courseTitles')
+  totalDocuments = document.getElementById('totalDocuments')
+  documentTitles = document.getElementById('documentTitles')
   themeToggle = document.getElementById('themeToggle')
 
   setupEventListeners()
   initializeTheme()
   createNewSession()
-  loadCourseStats()
+  loadDocumentStats()
 
   // New Chat button logic
   const newChatButton = document.getElementById('newChatButton')
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSessionId = data.session_id
         chatMessages.innerHTML = ''
         addMessage(
-          'Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?',
+          'Welcome to the Document Materials Assistant! I can help you with questions about documents, sections and specific content. What would you like to know?',
           'assistant',
           null,
           true
@@ -206,48 +206,48 @@ async function createNewSession() {
   currentSessionId = null
   chatMessages.innerHTML = ''
   addMessage(
-    'Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?',
+    'Welcome to the Document Materials Assistant! I can help you with questions about documents, sections and specific content. What would you like to know?',
     'assistant',
     null,
     true
   )
 }
 
-// Load course statistics
-async function loadCourseStats() {
+// Load document statistics
+async function loadDocumentStats() {
   try {
-    console.log('Loading course stats...')
-    const response = await fetch(`${API_URL}/courses`)
-    if (!response.ok) throw new Error('Failed to load course stats')
+    console.log('Loading document stats...')
+    const response = await fetch(`${API_URL}/documents`)
+    if (!response.ok) throw new Error('Failed to load document stats')
 
     const data = await response.json()
-    console.log('Course data received:', data)
+    console.log('Document data received:', data)
 
     // Update stats in UI
-    if (totalCourses) {
-      totalCourses.textContent = data.total_courses
+    if (totalDocuments) {
+      totalDocuments.textContent = data.total_documents
     }
 
-    // Update course titles
-    if (courseTitles) {
-      if (data.course_titles && data.course_titles.length > 0) {
-        courseTitles.innerHTML = data.course_titles
-          .map((title) => `<div class="course-title-item">${title}</div>`)
+    // Update document titles
+    if (documentTitles) {
+      if (data.document_titles && data.document_titles.length > 0) {
+        documentTitles.innerHTML = data.document_titles
+          .map((title) => `<div class="document-title-item">${title}</div>`)
           .join('')
       } else {
-        courseTitles.innerHTML =
-          '<span class="no-courses">No courses available</span>'
+        documentTitles.innerHTML =
+          '<span class="no-documents">No documents available</span>'
       }
     }
   } catch (error) {
-    console.error('Error loading course stats:', error)
+    console.error('Error loading document stats:', error)
     // Set default values on error
-    if (totalCourses) {
-      totalCourses.textContent = '0'
+    if (totalDocuments) {
+      totalDocuments.textContent = '0'
     }
-    if (courseTitles) {
-      courseTitles.innerHTML =
-        '<span class="error">Failed to load courses</span>'
+    if (documentTitles) {
+      documentTitles.innerHTML =
+        '<span class="error">Failed to load documents</span>'
     }
   }
 }

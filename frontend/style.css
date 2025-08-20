@@ -622,7 +622,7 @@ details[open] .suggested-header::before {
 }
 
 /* Course Stats in Sidebar */
-.course-stats {
+.document-stats {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -707,7 +707,7 @@ details[open] .suggested-header::before {
   /* Remove max-height to show all titles without scrolling */
 }
 
-.course-title-item {
+.document-title-item {
   font-size: 0.85rem;
   color: var(--text-primary);
   padding: 0.5rem 0.25rem;
@@ -716,15 +716,15 @@ details[open] .suggested-header::before {
   line-height: 1.4;
 }
 
-.course-title-item:last-child {
+.document-title-item:last-child {
   border-bottom: none;
 }
 
-.course-title-item:first-child {
+.document-title-item:first-child {
   padding-top: 0.25rem;
 }
 
-.no-courses,
+.no-documents,
 .loading,
 .error {
   font-size: 0.85rem;

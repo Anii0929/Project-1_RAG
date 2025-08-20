@@ -4,13 +4,13 @@ import re
 from typing import List, Tuple
 
 from logging_config import get_logger
-from models import Course, CourseChunk, Lesson
+from models import Document, DocumentChunk, Section
 
 logger = get_logger(__name__)
 
 
 class DocumentProcessor:
-    """Processes course documents and extracts structured information"""
+    """Processes documents and extracts structured information"""
 
     def __init__(self, chunk_size: int, chunk_overlap: int):
         self.chunk_size = chunk_size
@@ -127,9 +127,9 @@ class DocumentProcessor:
 
         return chunks
 
-    def process_course_document(
+    def process_document(
         self, file_path: str
-    ) -> Tuple[Course, List[CourseChunk]]:
+    ) -> Tuple[Document, List[DocumentChunk]]:
         """
         Process a course document with expected format:
         Line 1: Course Title: [title]
@@ -145,13 +145,13 @@ class DocumentProcessor:
         lines = content.strip().split("\n")
         logger.debug(f"Document split into {len(lines)} lines")
 
-        # Extract course metadata from first three lines
+        # Extract document metadata from first three lines
         course_title = filename  # Default fallback
         course_link = None
         instructor_name = "Unknown"
 
         logger.debug("=== Parsing course metadata ===")
-        # Parse course title from first line
+        # Parse document title from first line
         if len(lines) >= 1 and lines[0].strip():
             title_match = re.match(
                 r"^Course Title:\s*(.+)$", lines[0].strip(), re.IGNORECASE
@@ -163,13 +163,13 @@ class DocumentProcessor:
                 course_title = lines[0].strip()
                 logger.debug(f"Using first line as course title: '{course_title}'")
 
-        # Parse remaining lines for course metadata
+        # Parse remaining lines for document metadata
         for i in range(1, min(len(lines), 4)):  # Check first 4 lines for metadata
             line = lines[i].strip()
             if not line:
                 continue
 
-            # Try to match course link
+            # Try to match document link
             link_match = re.match(r"^Course Link:\s*(.+)$", line, re.IGNORECASE)
             if link_match:
                 course_link = link_match.group(1).strip()
@@ -185,10 +185,10 @@ class DocumentProcessor:
                 logger.debug(f"Found instructor: '{instructor_name}'")
                 continue
 
-        # Create course object with title as ID
-        course = Course(
+        # Create document object with title as ID
+        document = Document(
             title=course_title,
-            course_link=course_link,
+            document_link=course_link,
             instructor=instructor_name if instructor_name != "Unknown" else None,
         )
         logger.info(
@@ -197,7 +197,7 @@ class DocumentProcessor:
 
         # Process lessons and create chunks
         logger.debug("=== Processing lessons ===")
-        course_chunks = []
+        document_chunks = []
         current_lesson = None
         lesson_title = None
         lesson_link = None
@@ -227,13 +227,13 @@ class DocumentProcessor:
                         f"Processing previous lesson {current_lesson}: '{lesson_title}' ({len(lesson_text)} chars)"
                     )
                     if lesson_text:
-                        # Add lesson to course
-                        lesson = Lesson(
-                            lesson_number=current_lesson,
+                        # Add lesson to document
+                        section = Section(
+                            section_number=current_lesson,
                             title=lesson_title,
-                            lesson_link=lesson_link,
+                            section_link=lesson_link,
                         )
-                        course.lessons.append(lesson)
+                        document.sections.append(section)
                         logger.debug(
                             f"Added lesson {current_lesson} to course - Link: {lesson_link}"
                         )
@@ -252,13 +252,13 @@ class DocumentProcessor:
                             else:
                                 chunk_with_context = chunk
 
-                            course_chunk = CourseChunk(
+                            document_chunk = DocumentChunk(
                                 content=chunk_with_context,
-                                course_title=course.title,
-                                lesson_number=current_lesson,
+                                document_title=document.title,
+                                section_number=current_lesson,
                                 chunk_index=chunk_counter,
                             )
-                            course_chunks.append(course_chunk)
+                            document_chunks.append(document_chunk)
                             chunk_counter += 1
 
                 # Start new lesson
@@ -295,14 +295,14 @@ class DocumentProcessor:
                 f"Processing final lesson {current_lesson}: '{lesson_title}' ({len(lesson_text)} chars)"
             )
             if lesson_text:
-                lesson = Lesson(
-                    lesson_number=current_lesson,
+                section = Section(
+                    section_number=current_lesson,
                     title=lesson_title,
-                    lesson_link=lesson_link,
+                    section_link=lesson_link,
                 )
-                course.lessons.append(lesson)
+                document.sections.append(section)
                 logger.debug(
-                    f"Added final lesson {current_lesson} to course - Link: {lesson_link}"
+                    f"Added final lesson {current_lesson} to document - Link: {lesson_link}"
                 )
 
                 chunks = self.chunk_text(lesson_text)
@@ -310,21 +310,21 @@ class DocumentProcessor:
                     f"Created {len(chunks)} chunks for final lesson {current_lesson}"
                 )
                 for idx, chunk in enumerate(chunks):
-                    # For any chunk of each lesson, add lesson context & course title
+                    # For any chunk of each lesson, add lesson context & document title
 
                     chunk_with_context = f"Course {course_title} Lesson {current_lesson} content: {chunk}"
 
-                    course_chunk = CourseChunk(
+                    document_chunk = DocumentChunk(
                         content=chunk_with_context,
-                        course_title=course.title,
-                        lesson_number=current_lesson,
+                        document_title=document.title,
+                        section_number=current_lesson,
                         chunk_index=chunk_counter,
                     )
-                    course_chunks.append(course_chunk)
+                    document_chunks.append(document_chunk)
                     chunk_counter += 1
 
         # If no lessons found, treat entire content as one document
-        if not course_chunks and len(lines) > 2:
+        if not document_chunks and len(lines) > 2:
             logger.warning(
                 "No lessons found in document - treating entire content as single document"
             )
@@ -333,25 +333,25 @@ class DocumentProcessor:
                 chunks = self.chunk_text(remaining_content)
                 logger.debug(f"Created {len(chunks)} chunks from document content")
                 for chunk in chunks:
-                    course_chunk = CourseChunk(
+                    document_chunk = DocumentChunk(
                         content=chunk,
-                        course_title=course.title,
+                        document_title=document.title,
                         chunk_index=chunk_counter,
                     )
-                    course_chunks.append(course_chunk)
+                    document_chunks.append(document_chunk)
                     chunk_counter += 1
 
         # Final processing summary
-        lesson_count = len(course.lessons)
-        chunk_count = len(course_chunks)
+        section_count = len(document.sections)
+        chunk_count = len(document_chunks)
         logger.info(f"=== PROCESSING COMPLETE ===")
         logger.info(
-            f"Course: '{course.title}' - {lesson_count} lessons, {chunk_count} chunks"
+            f"Document: '{document.title}' - {section_count} sections, {chunk_count} chunks"
         )
-        if lesson_count > 0:
-            lessons_with_links = sum(
-                1 for lesson in course.lessons if lesson.lesson_link
+        if section_count > 0:
+            sections_with_links = sum(
+                1 for section in document.sections if section.section_link
             )
-            logger.info(f"Lessons with links: {lessons_with_links}/{lesson_count}")
+            logger.info(f"Sections with links: {sections_with_links}/{section_count}")
 
-        return course, course_chunks
+        return document, document_chunks
