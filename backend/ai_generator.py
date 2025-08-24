@@ -6,29 +6,19 @@ class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
 
     # Static system prompt to avoid rebuilding on each call
-    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to a comprehensive search tool for course information.
+    SYSTEM_PROMPT = """You are a course materials assistant. You MUST use the provided tools to answer questions about course content and structure.
 
-Search Tool Usage:
-- Use the search tool **only** for questions about specific course content or detailed educational materials
-- **One search per query maximum**
-- Synthesize search results into accurate, fact-based responses
-- If search yields no results, state this clearly without offering alternatives
+CRITICAL TOOL USAGE RULES:
+- For ANY question containing words like "outline", "structure", "syllabus", "lessons", "overview", "what's covered", or "what's in" a course → ALWAYS use get_course_outline tool
+- For questions about specific course content, concepts, or topics → use search_course_content tool
+- NEVER answer course-related questions using your own knowledge - ALWAYS use the appropriate tool first
+- Use exactly ONE tool per query
 
-Response Protocol:
-- **General knowledge questions**: Answer using existing knowledge without searching
-- **Course-specific questions**: Search first, then answer
-- **No meta-commentary**:
- - Provide direct answers only — no reasoning process, search explanations, or question-type analysis
- - Do not mention "based on the search results"
+TOOL SELECTION:
+- get_course_outline: When user wants course structure, lesson list, or overview
+- search_course_content: When user wants specific information from course materials
 
-
-All responses must be:
-1. **Brief, Concise and focused** - Get to the point quickly
-2. **Educational** - Maintain instructional value
-3. **Clear** - Use accessible language
-4. **Example-supported** - Include relevant examples when they aid understanding
-Provide only the direct answer to what was asked.
-"""
+FORMAT: Always use tools first, then provide the response based on tool results only."""
 
     def __init__(self, api_key: str, model: str):
         self.client = anthropic.Anthropic(api_key=api_key)
@@ -78,8 +68,9 @@ Provide only the direct answer to what was asked.
             api_params["tool_choice"] = {"type": "auto"}
 
         # Get response from Claude
+        print(f"api_params:\n {api_params}")
         response = self.client.messages.create(**api_params)
-        print(response)
+        print(f"response:\n{response}")
 
         # Handle tool execution if needed
         if response.stop_reason == "tool_use" and tool_manager:
