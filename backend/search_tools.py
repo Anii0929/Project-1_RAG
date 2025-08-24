@@ -21,11 +21,21 @@ class CourseSearchTool(Tool):
     """Tool for searching course content with semantic course name matching"""
 
     def __init__(self, vector_store: VectorStore):
+        """Initialize the course search tool with a vector store.
+        
+        Args:
+            vector_store: VectorStore instance for performing semantic searches.
+        """
         self.store = vector_store
         self.last_sources = []  # Track sources from last search
 
     def get_tool_definition(self) -> Dict[str, Any]:
-        """Return Anthropic tool definition for this tool"""
+        """Return Anthropic-compatible tool definition for course content search.
+        
+        Returns:
+            Dict[str, Any]: Tool definition with name, description, and input schema
+                for use with Anthropic's tool calling API.
+        """
         return {
             "name": "search_course_content",
             "description": "Search WITHIN course content for specific topics, concepts, or information. Use this for detailed questions about course content, not for course structure/outline requests",
@@ -86,7 +96,20 @@ class CourseSearchTool(Tool):
         return self._format_results(results)
 
     def _format_results(self, results: SearchResults) -> str:
-        """Format search results with course and lesson context"""
+        """Format search results with course and lesson context headers.
+        
+        Creates readable output with course/lesson attribution and tracks
+        source information for the UI.
+        
+        Args:
+            results: SearchResults object containing documents and metadata.
+            
+        Returns:
+            str: Formatted results with context headers and content.
+            
+        Side Effects:
+            Updates self.last_sources with source information for UI display.
+        """
         formatted = []
         sources = []  # Track sources for the UI
 
@@ -130,11 +153,21 @@ class CourseOutlineTool(Tool):
     """Tool for retrieving course outline information"""
 
     def __init__(self, vector_store: VectorStore):
+        """Initialize the course outline tool with a vector store.
+        
+        Args:
+            vector_store: VectorStore instance for retrieving course metadata.
+        """
         self.store = vector_store
         self.last_sources = []
 
     def get_tool_definition(self) -> Dict[str, Any]:
-        """Return Anthropic tool definition for this tool"""
+        """Return Anthropic-compatible tool definition for course outline retrieval.
+        
+        Returns:
+            Dict[str, Any]: Tool definition with name, description, and input schema
+                for retrieving complete course structure and lesson lists.
+        """
         return {
             "name": "get_course_outline",
             "description": "Get the COMPLETE STRUCTURE and OUTLINE of a course including title, instructor, course link, and full lesson list with titles and links. Use this for queries about course overview, structure, syllabus, what lessons are included, or when user asks 'what is the outline of [course]'",
@@ -227,10 +260,18 @@ class ToolManager:
     """Manages available tools for the AI"""
 
     def __init__(self):
+        """Initialize the tool manager with empty tool registry."""
         self.tools = {}
 
     def register_tool(self, tool: Tool):
-        """Register any tool that implements the Tool interface"""
+        """Register a tool that implements the Tool interface.
+        
+        Args:
+            tool: Tool instance that implements get_tool_definition() and execute().
+            
+        Raises:
+            ValueError: If tool definition is missing required 'name' field.
+        """
         tool_def = tool.get_tool_definition()
         tool_name = tool_def.get("name")
         if not tool_name:
@@ -238,18 +279,38 @@ class ToolManager:
         self.tools[tool_name] = tool
 
     def get_tool_definitions(self) -> list:
-        """Get all tool definitions for Anthropic tool calling"""
+        """Get all registered tool definitions for Anthropic tool calling API.
+        
+        Returns:
+            list: List of tool definition dictionaries compatible with
+                Anthropic's tool calling format.
+        """
         return [tool.get_tool_definition() for tool in self.tools.values()]
 
     def execute_tool(self, tool_name: str, **kwargs) -> str:
-        """Execute a tool by name with given parameters"""
+        """Execute a registered tool by name with provided parameters.
+        
+        Args:
+            tool_name: Name of the tool to execute.
+            **kwargs: Parameters to pass to the tool's execute method.
+            
+        Returns:
+            str: Tool execution result or error message.
+        """
         if tool_name not in self.tools:
             return f"Tool '{tool_name}' not found"
 
         return self.tools[tool_name].execute(**kwargs)
 
     def get_last_sources(self) -> list:
-        """Get sources from the last search operation"""
+        """Retrieve source information from the most recent tool execution.
+        
+        Checks all registered tools for source tracking and returns the most
+        recent sources for UI display.
+        
+        Returns:
+            list: List of source dictionaries with 'text' and optional 'link' keys.
+        """
         # Check all tools for last_sources attribute
         for tool in self.tools.values():
             if hasattr(tool, 'last_sources') and tool.last_sources:
@@ -257,7 +318,11 @@ class ToolManager:
         return []
 
     def reset_sources(self):
-        """Reset sources from all tools that track sources"""
+        """Clear source information from all tools that track sources.
+        
+        Called after retrieving sources to prevent stale source data
+        from appearing in subsequent responses.
+        """
         for tool in self.tools.values():
             if hasattr(tool, 'last_sources'):
                 tool.last_sources = []

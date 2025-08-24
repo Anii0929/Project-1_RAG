@@ -18,6 +18,18 @@ class RAGSystem:
     """Main orchestrator for the Retrieval-Augmented Generation system"""
 
     def __init__(self, config):
+        """Initialize the RAG system with all necessary components.
+        
+        Sets up document processing, vector storage, AI generation, session management,
+        and search tools based on the provided configuration.
+        
+        Args:
+            config: Configuration object containing all system settings.
+            
+        Raises:
+            ValueError: If an unsupported AI provider is specified.
+            ImportError: If required packages for the chosen AI provider are missing.
+        """
         self.config = config
 
         # Initialize core components
@@ -172,7 +184,18 @@ class RAGSystem:
         return response, sources
 
     def get_course_analytics(self) -> Dict:
-        """Get analytics about the course catalog"""
+        """Retrieve analytics and statistics about the course catalog.
+        
+        Returns:
+            Dict: Dictionary containing total course count and list of course titles.
+            
+        Example:
+            >>> analytics = rag_system.get_course_analytics()
+            >>> analytics['total_courses']
+            5
+            >>> 'Introduction to Python' in analytics['course_titles']
+            True
+        """
         return {
             "total_courses": self.vector_store.get_course_count(),
             "course_titles": self.vector_store.get_existing_course_titles()

@@ -12,6 +12,14 @@ class OllamaGenerator:
     """Local LLM using Ollama - No API costs, runs offline"""
     
     def __init__(self, model: str = "llama2"):
+        """Initialize Ollama generator with specified model.
+        
+        Args:
+            model: Name of the Ollama model to use (default: "llama2").
+            
+        Raises:
+            ImportError: If ollama package is not installed.
+        """
         self.model = model
         try:
             import ollama
@@ -24,6 +32,20 @@ class OllamaGenerator:
                          conversation_history: Optional[str] = None,
                          tools: Optional[List] = None,
                          tool_manager=None) -> str:
+        """Generate response using Ollama with tool support.
+        
+        Args:
+            query: User's question or request.
+            conversation_history: Previous conversation context.
+            tools: Available tools (for compatibility, not directly used).
+            tool_manager: Tool manager for executing tools.
+            
+        Returns:
+            str: Generated response, potentially enhanced with tool results.
+            
+        Raises:
+            Exception: If Ollama model is not available or request fails.
+        """
         
         # Build system prompt with tool instructions (similar to Anthropic approach)
         system_prompt = """You are a course materials assistant. You have access to tools to help answer questions.
@@ -66,7 +88,19 @@ Answer the following question using the appropriate tool if needed."""
             return f"Error generating response: {str(e)}"
 
     def _handle_ollama_tool_execution(self, initial_response: str, original_query: str, tool_manager) -> str:
-        """Handle tool execution for Ollama (simplified version of Anthropic's approach)"""
+        """Parse Ollama response for tool usage and execute tools.
+        
+        Implements simplified tool calling by parsing TOOL_USE patterns
+        from Ollama's text responses.
+        
+        Args:
+            initial_response: Ollama's initial response potentially containing tool usage.
+            original_query: The original user query.
+            tool_manager: Tool manager for executing tools.
+            
+        Returns:
+            str: Final response after tool execution and synthesis.
+        """
         
         # Parse tool usage from the response
         import re
@@ -108,7 +142,18 @@ Please provide a clear, concise answer to the original question: {original_query
             return f"Error executing tool: {str(e)}"
 
     def _fallback_tool_selection(self, query: str, tool_manager) -> str:
-        """Fallback tool selection when parsing fails"""
+        """Intelligently select and execute appropriate tool based on query keywords.
+        
+        Used when tool parsing fails, applies heuristics to determine
+        whether to use outline or content search tools.
+        
+        Args:
+            query: User's query to analyze.
+            tool_manager: Tool manager for executing tools.
+            
+        Returns:
+            str: Response generated after tool execution.
+        """
         
         outline_keywords = ["outline", "structure", "syllabus", "lessons", "overview", "what's covered", "what's in"]
         is_outline_query = any(keyword in query.lower() for keyword in outline_keywords)
@@ -146,6 +191,14 @@ class HuggingFaceGenerator:
     """Free Hugging Face transformers - No API costs"""
     
     def __init__(self):
+        """Initialize Hugging Face text generation pipeline.
+        
+        Loads a conversational model suitable for educational content Q&A.
+        
+        Raises:
+            ImportError: If transformers or torch packages are not installed.
+            Exception: If model loading fails.
+        """
         try:
             from transformers import pipeline
             # Use a good conversational model
@@ -162,6 +215,17 @@ class HuggingFaceGenerator:
                          conversation_history: Optional[str] = None,
                          tools: Optional[List] = None,
                          tool_manager=None) -> str:
+        """Generate response using Hugging Face transformers with search integration.
+        
+        Args:
+            query: User's question or request.
+            conversation_history: Previous conversation context (not used).
+            tools: Available tools (not used directly).
+            tool_manager: Tool manager for performing course content search.
+            
+        Returns:
+            str: Generated response based on search results and model inference.
+        """
         
         # Build prompt with search results
         if tool_manager:
@@ -193,6 +257,15 @@ class OpenAICompatibleGenerator:
     """For local OpenAI-compatible servers (like text-generation-webui)"""
     
     def __init__(self, base_url: str = "http://localhost:5000/v1", model: str = "local-model"):
+        """Initialize OpenAI-compatible client for local inference servers.
+        
+        Args:
+            base_url: Base URL of the OpenAI-compatible API server.
+            model: Model name to use for requests.
+            
+        Raises:
+            ImportError: If openai package is not installed.
+        """
         self.base_url = base_url
         self.model = model
         try:
@@ -208,6 +281,20 @@ class OpenAICompatibleGenerator:
                          conversation_history: Optional[str] = None,
                          tools: Optional[List] = None,
                          tool_manager=None) -> str:
+        """Generate response using OpenAI-compatible local server.
+        
+        Args:
+            query: User's question or request.
+            conversation_history: Previous conversation context.
+            tools: Available tools (not used directly).
+            tool_manager: Tool manager for performing course content search.
+            
+        Returns:
+            str: Generated response from the local model server.
+            
+        Raises:
+            Exception: If connection to local server fails.
+        """
         
         messages = []
         
@@ -248,12 +335,28 @@ class SimpleSearchOnlyGenerator:
     """Fallback: Just return search results without AI generation"""
     
     def __init__(self):
+        """Initialize search-only generator (no AI inference).
+        
+        This fallback option returns formatted search results without
+        any AI generation, useful when AI providers are unavailable.
+        """
         print("✓ Search-only generator initialized (no AI generation)")
     
     def generate_response(self, query: str,
                          conversation_history: Optional[str] = None,
                          tools: Optional[List] = None,
                          tool_manager=None) -> str:
+        """Return formatted search results without AI generation.
+        
+        Args:
+            query: User's question or request.
+            conversation_history: Previous conversation context (not used).
+            tools: Available tools (not used directly).
+            tool_manager: Tool manager for performing searches.
+            
+        Returns:
+            str: Formatted search results with appropriate tool selection.
+        """
         
         if tool_manager:
             # Decide which tool to use based on query keywords

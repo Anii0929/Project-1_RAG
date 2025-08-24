@@ -7,11 +7,27 @@ class DocumentProcessor:
     """Processes course documents and extracts structured information"""
     
     def __init__(self, chunk_size: int, chunk_overlap: int):
+        """Initialize the document processor with chunking parameters.
+        
+        Args:
+            chunk_size: Maximum size of each text chunk in characters.
+            chunk_overlap: Number of characters to overlap between consecutive chunks.
+        """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
     
     def read_file(self, file_path: str) -> str:
-        """Read content from file with UTF-8 encoding"""
+        """Read content from file with UTF-8 encoding and fallback error handling.
+        
+        Args:
+            file_path: Path to the file to read.
+            
+        Returns:
+            str: Content of the file as a string.
+            
+        Raises:
+            IOError: If file cannot be opened or read.
+        """
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 return file.read()
@@ -23,7 +39,23 @@ class DocumentProcessor:
 
 
     def chunk_text(self, text: str) -> List[str]:
-        """Split text into sentence-based chunks with overlap using config settings"""
+        """Split text into sentence-based chunks with overlap for optimal vector storage.
+        
+        Uses intelligent sentence splitting to preserve readability and context.
+        Ensures chunks don't exceed the configured size while maintaining sentence boundaries.
+        
+        Args:
+            text: Input text to split into chunks.
+            
+        Returns:
+            List[str]: List of text chunks with overlapping content for context preservation.
+            
+        Examples:
+            >>> processor = DocumentProcessor(chunk_size=100, chunk_overlap=20)
+            >>> chunks = processor.chunk_text("This is sentence one. This is sentence two.")
+            >>> len(chunks) >= 1
+            True
+        """
         
         # Clean up the text
         text = re.sub(r'\s+', ' ', text.strip())  # Normalize whitespace
@@ -95,12 +127,32 @@ class DocumentProcessor:
 
     
     def process_course_document(self, file_path: str) -> Tuple[Course, List[CourseChunk]]:
-        """
-        Process a course document with expected format:
-        Line 1: Course Title: [title]
-        Line 2: Course Link: [url]
-        Line 3: Course Instructor: [instructor]
-        Following lines: Lesson markers and content
+        """Process a structured course document into Course and CourseChunk objects.
+        
+        Parses course documents with the expected format:
+        - Line 1: Course Title: [title]
+        - Line 2: Course Link: [url] (optional)
+        - Line 3: Course Instructor: [instructor] (optional)
+        - Following lines: Lesson markers ("Lesson N: Title") and content
+        
+        Args:
+            file_path: Path to the course document file.
+            
+        Returns:
+            Tuple[Course, List[CourseChunk]]: Course metadata object and list of text chunks
+                with course/lesson context for vector storage.
+                
+        Raises:
+            IOError: If file cannot be read.
+            ValueError: If document format is invalid.
+            
+        Examples:
+            >>> processor = DocumentProcessor(chunk_size=800, chunk_overlap=100)
+            >>> course, chunks = processor.process_course_document('/path/to/course.txt')
+            >>> course.title
+            'Introduction to Machine Learning'
+            >>> len(chunks) > 0
+            True
         """
         content = self.read_file(file_path)
         filename = os.path.basename(file_path)

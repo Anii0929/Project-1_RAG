@@ -13,11 +13,26 @@ from unittest.mock import Mock
 
 # Mock the VectorStore to avoid chromadb dependency
 class MockVectorStore:
+    """Mock vector store for testing tool functionality without ChromaDB dependency."""
+    
     def _resolve_course_name(self, course_name):
+        """Mock course name resolution for testing.
+        
+        Args:
+            course_name: Course name to resolve.
+            
+        Returns:
+            str: Mock course title if 'MCP' is in the name, None otherwise.
+        """
         return "MCP: Build Rich-Context AI Apps with Anthropic" if "MCP" in course_name else None
     
     @property 
     def course_catalog(self):
+        """Mock course catalog collection for testing.
+        
+        Returns:
+            Mock: Mock collection object with predefined course metadata.
+        """
         mock_collection = Mock()
         mock_collection.get.return_value = {
             'metadatas': [{
@@ -33,7 +48,11 @@ class MockVectorStore:
         return mock_collection
 
 def test_tool_definitions():
-    """Test that both tools are properly defined"""
+    """Test that both search and outline tools are properly defined and functional.
+    
+    Verifies that tools can be registered, provide valid definitions,
+    and execute without errors using mock data.
+    """
     from search_tools import ToolManager, CourseSearchTool, CourseOutlineTool
     
     # Create tools with mock vector store
@@ -61,7 +80,11 @@ def test_tool_definitions():
     print("---")
 
 def test_tool_selection_logic():
-    """Test which keywords should trigger outline tool"""
+    """Test and display keyword patterns for tool selection.
+    
+    Shows which query patterns should trigger the outline tool versus
+    the content search tool to help with AI prompt engineering.
+    """
     outline_keywords = [
         "what is the outline of",
         "course outline",

@@ -15,7 +15,16 @@ class SearchResults:
     
     @classmethod
     def from_chroma(cls, chroma_results: Dict) -> 'SearchResults':
-        """Create SearchResults from ChromaDB query results"""
+        """Create SearchResults from ChromaDB query results.
+        
+        Extracts documents, metadata, and distances from ChromaDB's response format.
+        
+        Args:
+            chroma_results: Raw results dictionary from ChromaDB query.
+            
+        Returns:
+            SearchResults: Structured results object with extracted data.
+        """
         return cls(
             documents=chroma_results['documents'][0] if chroma_results['documents'] else [],
             metadata=chroma_results['metadatas'][0] if chroma_results['metadatas'] else [],
@@ -24,17 +33,39 @@ class SearchResults:
     
     @classmethod
     def empty(cls, error_msg: str) -> 'SearchResults':
-        """Create empty results with error message"""
+        """Create empty SearchResults with an error message.
+        
+        Args:
+            error_msg: Error message describing why no results were found.
+            
+        Returns:
+            SearchResults: Empty results object with error set.
+        """
         return cls(documents=[], metadata=[], distances=[], error=error_msg)
     
     def is_empty(self) -> bool:
-        """Check if results are empty"""
+        """Check if the search results contain any documents.
+        
+        Returns:
+            bool: True if no documents were found, False otherwise.
+        """
         return len(self.documents) == 0
 
 class VectorStore:
     """Vector storage using ChromaDB for course content and metadata"""
     
     def __init__(self, chroma_path: str, embedding_model: str, max_results: int = 5):
+        """Initialize the vector store with ChromaDB and sentence transformers.
+        
+        Args:
+            chroma_path: Path where ChromaDB will store its data.
+            embedding_model: Name of the sentence transformer model for embeddings.
+            max_results: Maximum number of search results to return by default.
+            
+        Raises:
+            ImportError: If required dependencies (chromadb, sentence_transformers) are missing.
+            ConnectionError: If ChromaDB cannot be initialized.
+        """
         self.max_results = max_results
         # Initialize ChromaDB client
         self.client = chromadb.PersistentClient(
@@ -52,7 +83,17 @@ class VectorStore:
         self.course_content = self._create_collection("course_content")  # Actual course material
     
     def _create_collection(self, name: str):
-        """Create or get a ChromaDB collection"""
+        """Create or retrieve a ChromaDB collection with embedding function.
+        
+        Args:
+            name: Name of the collection to create or retrieve.
+            
+        Returns:
+            Collection object from ChromaDB.
+            
+        Raises:
+            chromadb.errors.ChromaError: If collection creation fails.
+        """
         return self.client.get_or_create_collection(
             name=name,
             embedding_function=self.embedding_function
@@ -100,7 +141,22 @@ class VectorStore:
             return SearchResults.empty(f"Search error: {str(e)}")
     
     def _resolve_course_name(self, course_name: str) -> Optional[str]:
-        """Use vector search to find best matching course by name"""
+        """Use semantic vector search to find the best matching course by name.
+        
+        Performs fuzzy matching on course titles to handle partial names or typos.
+        
+        Args:
+            course_name: Partial or complete course name to search for.
+            
+        Returns:
+            Optional[str]: Full course title if found, None otherwise.
+            
+        Examples:
+            >>> store._resolve_course_name("MCP")
+            'MCP: Build Rich-Context AI Apps with Anthropic'
+            >>> store._resolve_course_name("nonexistent")
+            None
+        """
         try:
             results = self.course_catalog.query(
                 query_texts=[course_name],
@@ -116,7 +172,24 @@ class VectorStore:
         return None
     
     def _build_filter(self, course_title: Optional[str], lesson_number: Optional[int]) -> Optional[Dict]:
-        """Build ChromaDB filter from search parameters"""
+        """Build ChromaDB metadata filter from search parameters.
+        
+        Creates appropriate filter dictionaries for ChromaDB queries based on
+        course title and lesson number constraints.
+        
+        Args:
+            course_title: Course title to filter by, if any.
+            lesson_number: Lesson number to filter by, if any.
+            
+        Returns:
+            Optional[Dict]: ChromaDB filter dictionary, None if no filters.
+            
+        Examples:
+            >>> store._build_filter("Course A", 1)
+            {'$and': [{'course_title': 'Course A'}, {'lesson_number': 1}]}
+            >>> store._build_filter(None, None)
+            None
+        """
         if not course_title and lesson_number is None:
             return None
             
@@ -133,7 +206,18 @@ class VectorStore:
         return {"lesson_number": lesson_number}
     
     def add_course_metadata(self, course: Course):
-        """Add course information to the catalog for semantic search"""
+        """Add course metadata to the catalog collection for semantic search.
+        
+        Stores course title, instructor, links, and lesson information in a format
+        optimized for semantic search and metadata retrieval.
+        
+        Args:
+            course: Course object containing all metadata to store.
+            
+        Raises:
+            chromadb.errors.ChromaError: If data insertion fails.
+            json.JSONEncodeError: If lesson metadata cannot be serialized.
+        """
         import json
 
         course_text = course.title
@@ -160,7 +244,18 @@ class VectorStore:
         )
     
     def add_course_content(self, chunks: List[CourseChunk]):
-        """Add course content chunks to the vector store"""
+        """Add course content chunks to the vector store for semantic search.
+        
+        Stores text chunks with their associated metadata (course, lesson, position)
+        for efficient retrieval during question answering.
+        
+        Args:
+            chunks: List of CourseChunk objects containing text and metadata.
+            
+        Raises:
+            chromadb.errors.ChromaError: If chunk insertion fails.
+            ValueError: If chunks list is empty or contains invalid data.
+        """
         if not chunks:
             return
         
@@ -180,7 +275,13 @@ class VectorStore:
         )
     
     def clear_all_data(self):
-        """Clear all data from both collections"""
+        """Clear all data from both collections and recreate them.
+        
+        Useful for complete data refresh during development or maintenance.
+        
+        Raises:
+            chromadb.errors.ChromaError: If collection deletion or recreation fails.
+        """
         try:
             self.client.delete_collection("course_catalog")
             self.client.delete_collection("course_content")
@@ -191,7 +292,14 @@ class VectorStore:
             print(f"Error clearing data: {e}")
     
     def get_existing_course_titles(self) -> List[str]:
-        """Get all existing course titles from the vector store"""
+        """Retrieve all existing course titles from the vector store.
+        
+        Returns:
+            List[str]: List of course titles currently stored in the catalog.
+            
+        Raises:
+            chromadb.errors.ChromaError: If data retrieval fails.
+        """
         try:
             # Get all documents from the catalog
             results = self.course_catalog.get()
@@ -203,7 +311,14 @@ class VectorStore:
             return []
     
     def get_course_count(self) -> int:
-        """Get the total number of courses in the vector store"""
+        """Get the total number of courses stored in the vector store.
+        
+        Returns:
+            int: Total number of courses in the catalog.
+            
+        Raises:
+            chromadb.errors.ChromaError: If data retrieval fails.
+        """
         try:
             results = self.course_catalog.get()
             if results and 'ids' in results:
@@ -214,7 +329,18 @@ class VectorStore:
             return 0
     
     def get_all_courses_metadata(self) -> List[Dict[str, Any]]:
-        """Get metadata for all courses in the vector store"""
+        """Retrieve complete metadata for all courses in the vector store.
+        
+        Returns parsed lesson information and all course metadata.
+        
+        Returns:
+            List[Dict[str, Any]]: List of course metadata dictionaries with
+                parsed lesson information.
+                
+        Raises:
+            chromadb.errors.ChromaError: If data retrieval fails.
+            json.JSONDecodeError: If lesson metadata cannot be parsed.
+        """
         import json
         try:
             results = self.course_catalog.get()
@@ -234,7 +360,17 @@ class VectorStore:
             return []
 
     def get_course_link(self, course_title: str) -> Optional[str]:
-        """Get course link for a given course title"""
+        """Retrieve the main course link for a given course title.
+        
+        Args:
+            course_title: Exact course title to look up.
+            
+        Returns:
+            Optional[str]: Course link URL if available, None otherwise.
+            
+        Raises:
+            chromadb.errors.ChromaError: If data retrieval fails.
+        """
         try:
             # Get course by ID (title is the ID)
             results = self.course_catalog.get(ids=[course_title])
@@ -247,7 +383,19 @@ class VectorStore:
             return None
     
     def get_lesson_link(self, course_title: str, lesson_number: int) -> Optional[str]:
-        """Get lesson link for a given course title and lesson number"""
+        """Retrieve the link for a specific lesson within a course.
+        
+        Args:
+            course_title: Exact course title containing the lesson.
+            lesson_number: Lesson number to find the link for.
+            
+        Returns:
+            Optional[str]: Lesson link URL if available, None otherwise.
+            
+        Raises:
+            chromadb.errors.ChromaError: If data retrieval fails.
+            json.JSONDecodeError: If lesson metadata cannot be parsed.
+        """
         import json
         try:
             # Get course by ID (title is the ID)
