@@ -183,7 +183,7 @@ class CourseOutlineTool(Tool):
             }
         }
 
-    def execute(self, course_name: str) -> str:
+    def execute(self, course_name: str = None) -> str:
         """
         Execute the outline tool to get course structure.
 
@@ -193,6 +193,13 @@ class CourseOutlineTool(Tool):
         Returns:
             Formatted course outline or error message
         """
+        # Handle missing course_name parameter gracefully
+        if not course_name:
+            # Fallback: suggest using list_all_courses or provide course options
+            titles = self.store.get_existing_course_titles()
+            if not titles:
+                return "No courses available. Please add some course documents first."
+            return f"Please specify which course outline you want. Available courses: {', '.join(titles[:5])}. Or ask 'what courses are available?' to see all courses with details."
         # Use semantic search to find matching course
         course_title = self.store._resolve_course_name(course_name)
         if not course_title:
@@ -254,6 +261,79 @@ class CourseOutlineTool(Tool):
 
         except Exception as e:
             return f"Error retrieving course outline: {str(e)}"
+
+
+class CourseListTool(Tool):
+    """Tool for listing all available courses"""
+    
+    def __init__(self, vector_store: VectorStore):
+        """Initialize the course list tool with a vector store.
+        
+        Args:
+            vector_store: VectorStore instance for retrieving course titles.
+        """
+        self.store = vector_store
+        self.last_sources = []
+    
+    def get_tool_definition(self) -> Dict[str, Any]:
+        """Return Anthropic-compatible tool definition for listing all courses.
+        
+        Returns:
+            Dict[str, Any]: Tool definition with name, description, and input schema
+                for listing all available courses in the system.
+        """
+        return {
+            "name": "list_all_courses",
+            "description": "List ALL available courses in the system. Use this when user asks 'what courses are available', 'show me all courses', 'list courses', or similar general course listing queries. Does not require any parameters.",
+            "input_schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    
+    def execute(self) -> str:
+        """Execute the course listing tool.
+        
+        Returns:
+            Formatted list of all available courses.
+        """
+        try:
+            course_titles = self.store.get_existing_course_titles()
+            
+            if not course_titles:
+                return "No courses are currently available in the system."
+            
+            # Get course metadata for better display
+            all_metadata = self.store.get_all_courses_metadata()
+            
+            courses_info = []
+            for metadata in all_metadata:
+                title = metadata.get('title', 'Unknown Course')
+                instructor = metadata.get('instructor', 'Unknown Instructor')
+                lesson_count = metadata.get('lesson_count', 0)
+                course_link = metadata.get('course_link')
+                
+                course_info = f"• **{title}**"
+                if instructor and instructor != 'Unknown Instructor':
+                    course_info += f" by {instructor}"
+                if lesson_count > 0:
+                    course_info += f" ({lesson_count} lessons)"
+                if course_link:
+                    course_info += f" - [Course Link]({course_link})"
+                
+                courses_info.append(course_info)
+            
+            # Track source for UI (general course listing)
+            self.last_sources = [{
+                "text": f"Course Catalog ({len(course_titles)} courses)",
+                "link": None
+            }]
+            
+            return f"Available courses ({len(course_titles)}):\n\n" + "\n\n".join(courses_info)
+            
+        except Exception as e:
+            return f"Error retrieving course list: {str(e)}"
 
 
 class ToolManager:

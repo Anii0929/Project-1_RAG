@@ -205,6 +205,20 @@ class VectorStore:
             
         return {"lesson_number": lesson_number}
     
+    def _sanitize_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove None values from metadata to prevent ChromaDB errors.
+        
+        ChromaDB v1.0.15+ cannot handle None values in metadata fields.
+        This method removes any keys with None values.
+        
+        Args:
+            metadata: Dictionary that may contain None values.
+            
+        Returns:
+            Dict with None values filtered out.
+        """
+        return {k: v for k, v in metadata.items() if v is not None}
+
     def add_course_metadata(self, course: Course):
         """Add course metadata to the catalog collection for semantic search.
         
@@ -231,15 +245,21 @@ class VectorStore:
                 "lesson_link": lesson.lesson_link
             })
         
+        # Create metadata and sanitize None values
+        metadata = {
+            "title": course.title,
+            "instructor": course.instructor,
+            "course_link": course.course_link,
+            "lessons_json": json.dumps(lessons_metadata),  # Serialize as JSON string
+            "lesson_count": len(course.lessons)
+        }
+        
+        # Sanitize to remove None values
+        metadata = self._sanitize_metadata(metadata)
+        
         self.course_catalog.add(
             documents=[course_text],
-            metadatas=[{
-                "title": course.title,
-                "instructor": course.instructor,
-                "course_link": course.course_link,
-                "lessons_json": json.dumps(lessons_metadata),  # Serialize as JSON string
-                "lesson_count": len(course.lessons)
-            }],
+            metadatas=[metadata],
             ids=[course.title]
         )
     
