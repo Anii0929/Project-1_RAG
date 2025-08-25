@@ -5,14 +5,13 @@ Pytest configuration and shared fixtures for RAG system testing.
 import json
 import os
 import shutil
-
-# Add backend to path for imports
 import sys
 import tempfile
 from typing import Any, Dict, List
 from unittest.mock import MagicMock, Mock
 
 import pytest
+import pytest_asyncio
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -218,6 +217,92 @@ def mock_tool_manager():
     mock_manager.reset_sources.return_value = None
 
     return mock_manager
+
+
+@pytest.fixture
+def mock_rag_system():
+    """Create a mock RAGSystem for API testing."""
+    mock_rag = Mock()
+    
+    # Mock query method
+    mock_rag.query.return_value = (
+        "This is a test response about MCP applications.",
+        [{"course_title": "MCP: Build Rich-Context AI Apps with Anthropic", "lesson_number": "1", "lesson_link": "https://example.com/lesson1"}]
+    )
+    
+    # Mock session manager
+    mock_rag.session_manager.create_session.return_value = "test_session_123"
+    
+    # Mock course analytics
+    mock_rag.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["MCP: Build Rich-Context AI Apps with Anthropic", "Advanced Python Programming"]
+    }
+    
+    return mock_rag
+
+
+@pytest.fixture
+def test_app(mock_rag_system):
+    """Create a test FastAPI app without static file mounting issues."""
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.middleware.trustedhost import TrustedHostMiddleware
+    from app import QueryRequest, QueryResponse, CourseStats
+    import sys
+    
+    # Create test app
+    app = FastAPI(title="Course Materials RAG System Test")
+    
+    # Add middleware
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
+    
+    # Add API endpoints inline to avoid static file mounting
+    @app.post("/api/query", response_model=QueryResponse)
+    async def query_documents(request: QueryRequest):
+        try:
+            session_id = request.session_id or mock_rag_system.session_manager.create_session()
+            answer, sources = mock_rag_system.query(request.query, session_id)
+            return QueryResponse(answer=answer, sources=sources, session_id=session_id)
+        except Exception as e:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/api/courses", response_model=CourseStats)
+    async def get_course_stats():
+        try:
+            analytics = mock_rag_system.get_course_analytics()
+            return CourseStats(
+                total_courses=analytics["total_courses"],
+                course_titles=analytics["course_titles"]
+            )
+        except Exception as e:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/")
+    async def root():
+        return {"message": "Course Materials RAG System API"}
+    
+    return app
+
+
+@pytest_asyncio.fixture
+async def client(test_app):
+    """Create an async HTTP client for API testing."""
+    from httpx import AsyncClient, ASGITransport
+    
+    transport = ASGITransport(app=test_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
 
 
 # Test utilities
