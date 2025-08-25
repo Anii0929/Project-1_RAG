@@ -1,5 +1,6 @@
+from typing import Any, Dict, List, Optional
+
 import anthropic
-from typing import List, Optional, Dict, Any
 
 
 class AIGenerator:
@@ -33,16 +34,15 @@ FORMAT: Always use tools first, then provide the response based on tool results 
         self.max_tool_rounds = max_tool_rounds
 
         # Pre-build base API parameters
-        self.base_params = {
-            "model": self.model,
-            "temperature": 0,
-            "max_tokens": 800
-        }
+        self.base_params = {"model": self.model, "temperature": 0, "max_tokens": 800}
 
-    def generate_response(self, query: str,
-                          conversation_history: Optional[str] = None,
-                          tools: Optional[List] = None,
-                          tool_manager=None) -> str:
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: Optional[str] = None,
+        tools: Optional[List] = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate AI response with sequential tool calling support.
 
@@ -75,7 +75,7 @@ FORMAT: Always use tools first, then provide the response based on tool results 
             api_params = {
                 **self.base_params,
                 "messages": messages,
-                "system": system_content
+                "system": system_content,
             }
 
             # Add tools if available
@@ -92,30 +92,42 @@ FORMAT: Always use tools first, then provide the response based on tool results 
             if response.stop_reason == "tool_use" and tool_manager:
                 # Execute tools and prepare for next round
                 messages.append({"role": "assistant", "content": response.content})
-                
+
                 tool_results = self._execute_tools(response, tool_manager)
                 messages.append({"role": "user", "content": tool_results})
-                
+
                 # Continue to next round
                 continue
-                
+
             elif response.stop_reason in ["end_turn", "max_tokens"]:
                 # Final response received - no more tools needed
-                return response.content[0].text if response.content else "No response generated"
-                
+                return (
+                    response.content[0].text
+                    if response.content
+                    else "No response generated"
+                )
+
             else:
                 # Unexpected stop reason - return what we have
-                return response.content[0].text if response.content else "No response generated"
-        
+                return (
+                    response.content[0].text
+                    if response.content
+                    else "No response generated"
+                )
+
         # Max rounds reached - make final call without tools to get response
         final_params = {
             **self.base_params,
             "messages": messages,
-            "system": system_content
+            "system": system_content,
         }
-        
+
         final_response = self.client.messages.create(**final_params)
-        return final_response.content[0].text if final_response.content else "Maximum tool rounds exceeded."
+        return (
+            final_response.content[0].text
+            if final_response.content
+            else "Maximum tool rounds exceeded."
+        )
 
     def _execute_tools(self, response, tool_manager) -> List[Dict[str, Any]]:
         """
@@ -133,22 +145,25 @@ FORMAT: Always use tools first, then provide the response based on tool results 
             if content_block.type == "tool_use":
                 try:
                     tool_result = tool_manager.execute_tool(
-                        content_block.name,
-                        **content_block.input
+                        content_block.name, **content_block.input
                     )
 
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": tool_result
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": tool_result,
+                        }
+                    )
                 except Exception as e:
                     # Handle tool execution errors gracefully
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": f"Tool execution failed: {str(e)}",
-                        "is_error": True
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": f"Tool execution failed: {str(e)}",
+                            "is_error": True,
+                        }
+                    )
 
         return tool_results

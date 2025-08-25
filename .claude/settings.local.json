@@ -11,7 +11,9 @@
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_snapshot",
       "Bash(python -m pytest --version)",
-      "Bash(uv run pytest:*)"
+      "Bash(uv run pytest:*)",
+      "Bash(uv sync:*)",
+      "Bash(./scripts/quality.sh:*)"
     ],
     "deny": []
   }

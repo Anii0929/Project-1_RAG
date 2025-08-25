@@ -1,6 +1,6 @@
 def main():
     """Simple entry point for the RAG chatbot codebase.
-    
+
     This is a basic placeholder main function. The actual application
     is served through the FastAPI backend in backend/app.py.
     """

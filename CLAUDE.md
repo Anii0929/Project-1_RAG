@@ -17,8 +17,8 @@ uv run uvicorn app:app --reload --port 8000
 
 ### Environment Setup
 ```bash
-# Install dependencies
-uv sync
+# Install dependencies (including dev tools)
+uv sync --group dev
 
 # Create .env file from example
 cp .env.example .env
@@ -28,6 +28,21 @@ cp .env.example .env
 # AI_PROVIDER=huggingface (free, cloud)
 # AI_PROVIDER=search_only (no AI generation)
 # AI_PROVIDER=anthropic (requires API key + credits)
+```
+
+### Code Quality Tools
+```bash
+# Format code automatically
+./scripts/format.sh
+
+# Run all quality checks
+./scripts/quality.sh
+
+# Individual tool usage:
+uv run black .                    # Format code
+uv run isort .                    # Sort imports
+uv run flake8 .                   # Check code style
+uv run mypy backend/ main.py      # Type checking
 ```
 
 ### AI Provider Setup
@@ -171,3 +186,9 @@ On application startup:
 ## Development Best Practices
 - Always use uv to run the server, do not use pip directly
 - Make sure to use uv to manage all dependencies
+- Run `./scripts/format.sh` before committing changes to ensure consistent formatting
+- Use `./scripts/quality.sh` to check code quality and catch issues early
+- Code is automatically formatted with Black (88 character line length)
+- Import sorting is handled by isort (configured for Black compatibility)
+- Type hints are checked with mypy for better code reliability
+- Code style is enforced by flake8 with sensible defaults
