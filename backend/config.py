@@ -8,7 +8,12 @@ load_dotenv()
 @dataclass
 class Config:
     """Configuration settings for the RAG system"""
-    # Anthropic API settings
+    # Company LLM API settings (following LLMProvider.md specifications)
+    RDSEC_API_ENDPOINT: str = os.getenv("RDSEC_API_ENDPOINT", "")
+    RDSEC_API_KEY: str = os.getenv("RDSEC_API_KEY", "")
+    RDSEC_MODEL: str = "gpt-4o"  # Using gpt-4o as specified in LLMProvider.md
+    
+    # Legacy Anthropic settings (kept for fallback if needed)
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
     
