@@ -2,7 +2,7 @@ from typing import List, Tuple, Optional, Dict
 import os
 from document_processor import DocumentProcessor
 from vector_store import VectorStore
-from ai_generator import AIGenerator
+from ai_generator import AIGenerator, OpenAIGenerator
 from session_manager import SessionManager
 from search_tools import ToolManager, CourseSearchTool
 from models import Course, Lesson, CourseChunk
@@ -16,7 +16,21 @@ class RAGSystem:
         # Initialize core components
         self.document_processor = DocumentProcessor(config.CHUNK_SIZE, config.CHUNK_OVERLAP)
         self.vector_store = VectorStore(config.CHROMA_PATH, config.EMBEDDING_MODEL, config.MAX_RESULTS)
-        self.ai_generator = AIGenerator(config.ANTHROPIC_API_KEY, config.ANTHROPIC_MODEL)
+        
+        # Initialize AI generator with company LLM as primary
+        if config.RDSEC_API_KEY and config.RDSEC_API_ENDPOINT:
+            print("Using company RDSec LLM provider")
+            self.ai_generator = OpenAIGenerator(
+                config.RDSEC_API_KEY, 
+                config.RDSEC_API_ENDPOINT, 
+                config.RDSEC_MODEL
+            )
+        elif config.ANTHROPIC_API_KEY:
+            print("Falling back to Anthropic LLM provider")
+            self.ai_generator = AIGenerator(config.ANTHROPIC_API_KEY, config.ANTHROPIC_MODEL)
+        else:
+            raise ValueError("No valid LLM API key found. Please set RDSEC_API_KEY or ANTHROPIC_API_KEY in your .env file")
+        
         self.session_manager = SessionManager(config.MAX_HISTORY)
         
         # Initialize search tools
