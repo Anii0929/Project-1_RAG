@@ -22,7 +22,7 @@ Response Protocol:
 
 
 All responses must be:
-1. **Concise and focused** - Get to the point quickly
+1. **Brief, Concise and focused** - Get to the point quickly
 2. **Educational** - Maintain instructional value
 3. **Clear** - Use accessible language
 4. **Example-supported** - Include relevant examples when they aid understanding

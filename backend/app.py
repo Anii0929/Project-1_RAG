@@ -97,5 +97,23 @@ async def startup_event():
         except Exception as e:
             print(f"Error loading documents: {e}")
 
+# Custom static file handler with no-cache headers for development
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+from pathlib import Path
+
+
+class DevStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if isinstance(response, FileResponse):
+            # Add no-cache headers for development
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+    
+    
 # Serve static files for the frontend
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
